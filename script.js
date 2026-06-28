@@ -5,6 +5,8 @@ let level = 1;
 let timeLeft = 45;
 let gameInterval;
 let aiSimulationInterval;
+let localStream = null; // Biến lưu trữ luồng camera để tắt/mở
+let isCamOn = true;
 
 // Định nghĩa cấu trúc yêu cầu của cả 6 Cấp độ
 const kịchBản6Level = {
@@ -16,20 +18,43 @@ const kịchBản6Level = {
     6: { tenVatPham: ["tui_nilon"], thongBao: "Màn CHUNG KẾT: Dọn sạch túi nilon để giải cứu Lâm Đồng!", thungMo: "3", diemCanQua: 120 }
 };
 
-// 1. HÀM TỰ ĐỘNG BẬT WEBCAM NGAY KHI MỞ TRANG WEB (Đã tách riêng ra)
+// 1. HÀM MỞ WEBCAM KHI VÀO TRANG WEB
 async function moWebcamMoi() {
     const video = document.getElementById("webcam");
     try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        document.getElementById("ai-result").innerText = "📸 Camera đã bật! Hãy kết nối Arduino để chơi.";
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = localStream;
+        isCamOn = true;
+        document.getElementById("btn-toggle-cam").innerText = "📷 Tắt Camera";
+        document.getElementById("btn-toggle-cam").style.background = "#616161";
+        document.getElementById("ai-result").innerText = "📸 Camera đã bật! Có thể bấm Bắt đầu chơi thử ngay.";
     } catch (err) {
-        alert("Không tìm thấy hoặc không thể mở Webcam trên máy tính của bạn!");
-        document.getElementById("ai-result").innerText = "❌ Lỗi: Không mở được Camera.";
+        console.error("Lỗi mở camera: ", err);
+        document.getElementById("ai-result").innerText = "❌ Không tìm thấy Webcam.";
     }
 }
 
-// 2. HÀM KẾT NỐI MẠCH ARDUINO QUA WEB SERIAL API
+// 2. HÀM CHỦ ĐỘNG BẬT / TẮT CAMERA THEO YÊU CẦU
+function batTatCamera() {
+    const video = document.getElementById("webcam");
+    const btn = document.getElementById("btn-toggle-cam");
+
+    if (isCamOn && localStream) {
+        // Tắt tất cả các luồng của camera
+        let tracks = localStream.getTracks();
+        tracks.forEach(track => track.stop());
+        video.srcObject = null;
+        isCamOn = false;
+        btn.innerText = "📷 Bật Camera";
+        btn.style.background = "#4caf50";
+        document.getElementById("ai-result").innerText = "🔒 Camera đã tạm tắt.";
+    } else {
+        // Bật lại camera
+        moWebcamMoi();
+    }
+}
+
+// 3. KẾT NỐI MẠCH ARDUINO (NẾU CÓ)
 async function ketNoiArduino() {
     try {
         port = await navigator.serial.requestPort();
@@ -38,15 +63,14 @@ async function ketNoiArduino() {
         
         document.getElementById("status").innerText = "Trạng thái: Đã kết nối Thùng Rác thành công! ✔";
         document.getElementById("status").style.color = "#2e7d32";
-        document.getElementById("btn-start").disabled = false; // Mở khóa nút chơi game
         document.getElementById("mission").innerText = "Phần cứng đã sẵn sàng! Bấm Bắt đầu thử thách ngay.";
     } catch (error) {
-        alert("Không thể kết nối cổng COM phần cứng. Hãy thử lại!");
+        alert("Không thể kết nối cổng COM phần cứng. Bạn vẫn có thể chơi thử nghiệm bằng Camera!");
         console.error(error);
     }
 }
 
-// 3. KHỞI ĐỘNG TRẬN ĐẤU VÀ ĐỒNG HỒ ĐẾM NGƯỢC
+// 4. KHỞI ĐỘNG TRẬN ĐẤU (Bấm chơi được luôn dù chưa có Arduino)
 function batDauGame() {
     score = 0;
     level = 1;
@@ -67,15 +91,16 @@ function batDauGame() {
         }
     }, 1000);
 
-    // Bắt đầu vòng quét AI giả lập
+    // Chạy vòng quét giả lập AI nhận diện vật phẩm từ camera
     clearInterval(aiSimulationInterval);
     aiSimulationInterval = setInterval(quetAnhBangAI, 2500);
 }
 
-// 4. VÒNG LẶP QUÉT AI GIẢ LẬP
+// 5. VÒNG LẶP QUÉT AI GIẢ LẬP ĐỂ TEST ĐIỂM SỐ VÀ LEVEL
 function quetAnhBangAI() {
     if (timeLeft <= 0) return;
 
+    // Danh sách rác mẫu để AI tự bốc quét ngẫu nhiên trước ống kính
     const danhSachGiaLap = ["chai_nhua", "la_cay", "tui_nilon", "vo_chuoi", "hop_xop", "rac_doc_hai"];
     const ketQuaAI = danhSachGiaLap[Math.floor(Math.random() * danhSachGiaLap.length)];
     
@@ -85,7 +110,7 @@ function quetAnhBangAI() {
     kiemTraPhanLoaiHợpLe(ketQuaAI);
 }
 
-// 5. BỘ XỬ LÝ LOGIC CHÍNH CHO 6 LEVEL VÀ RA LỆNH ARDUINO
+// 6. BỘ XỬ LÝ LOGIC CHÍNH CHO 6 LEVEL 
 async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
     let levelHienTai = kịchBản6Level[level];
     let alertBox = document.getElementById("game-alert");
@@ -95,14 +120,16 @@ async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
         score += 10;
         document.getElementById("score").innerText = score;
         
-        alertBox.innerText = "✨ Chính xác! +10 Điểm. Đang mở nắp thùng rác...";
+        // Thêm chữ thông báo cho hai bạn biết hệ thống đang test giả lập mượt mà
+        if (writer) {
+            alertBox.innerText = "✨ Chính xác! +10 Điểm. Đang lệnh mở nắp thùng vật lý...";
+            await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
+        } else {
+            alertBox.innerText = "✨ [TEST GIẢ LẬP] Chính xác! +10 Điểm. (Thùng rác ảo đã mở)";
+        }
         alertBox.classList.add("alert-success");
 
-        // Gửi tín hiệu xuống Arduino nếu đã có kết nối phần cứng
-        if (writer) {
-            await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
-        }
-
+        // KIỂM TRA ĐIỀU KIỆN CHUYỂN LEVEL (1 ĐẾN 6)
         if (score >= levelHienTai.diemCanQua) {
             if (level < 6) {
                 level++;
@@ -119,20 +146,22 @@ async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
     }
 }
 
-// 6. HÀM KẾT THÚC TRẬN ĐẤU
+// 7. HÀM KẾT THÚC TRẬN ĐẤU
 function ketThucGame(isChienThang) {
     clearInterval(gameInterval);
     clearInterval(aiSimulationInterval);
-    document.getElementById("btn-start").disabled = false;
+    document.getElementById("btn-start").disabled = false; // Mở lại nút để chơi tiếp ván mới
     
     if (isChienThang) {
-        alert("🏆 CHÚC MỪNG! HAI BẠN ĐÃ CHIẾN THẮNG TRÒ CHƠI VÀ BẢO VỆ MÔI TRƯỜNG LÂM ĐỒNG THÀNH CÔNG!");
+        alert("🏆 CHÚC MỪNG! BẠN ĐÃ VƯỢT QUA CẢ 6 CẤP ĐỘ VÀ BẢO VỆ MÔI TRƯỜNG THÀNH CÔNG!");
     } else {
         alert("⏰ Hết giờ! Hãy chuẩn bị lại các món rác thật chuẩn xác để thử thách lại nhé.");
     }
 }
 
-// LỆNH ÉP CAMERA CHẠY NGAY KHI VỪA TẢI TRANG WEB XONG
+// TỰ ĐỘNG BẬT CAMERA VÀ MỞ KHÓA NÚT CHƠI KHI VỪA VÀO TRANG WEB
 window.onload = function() {
     moWebcamMoi();
+    document.getElementById("btn-start").disabled = false; // Bật nút Bắt đầu lên ngay lập tức!
+    document.getElementById("mission").innerText = "Hệ thống giả lập đã sẵn sàng! Bấm Bắt đầu thử thách để test 6 Level.";
 };
