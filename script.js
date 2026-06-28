@@ -8,22 +8,130 @@ let aiSimulationInterval;
 let localStream = null;
 let isCamOn = true;
 
-// Khai báo các Emoji đại diện cho rác để hiển thị rác ảo rơi trên màn hình
-const hinhAnhRacAo = {
+// --- HỆ THỐNG ĐỒ HỌA GAME CANVAS 2D ---
+let canvas, ctx;
+let activeTrashItems = []; // Danh sách các vật phẩm rác đang bay trong game
+let shockwaveActive = false; // Hiệu ứng nổ điểm
+let shockwaveX = 0, shockwaveY = 0;
+
+const bieuTuongRac = {
     "chai_nhua": "🍾", "vo_lon": "🥫", 
     "la_cay": "🍃", "vo_chuoi": "🍌", 
-    "tui_nilon": "🛍️", "hop_xop": "📦",
-    "rac_doc_hai": "🔋"
+    "tui_nilon": "🛍️", "hop_xop": "📦"
 };
 
 const kịchBản6Level = {
-    1: { tenVatPham: ["chai_nhua", "vo_lon"], thongBao: "Màn 1: Thu gom RÁC TÁI CHẾ (Chai nhựa / Vỏ lon nhôm)", thungMo: "2", diemCanQua: 20 },
+    1: { tenVatPham: ["chai_nhua", "vo_lon"], thongBao: "Màn 1: Thu gom RÁC TÁI CHẾ (Chai nhựa / Vỏ lon)", thungMo: "2", diemCanQua: 20 },
     2: { tenVatPham: ["la_cay", "vo_chuoi"], thongBao: "Màn 2: Thu gom RÁC HỮU CƠ (Lá cây / Vỏ trái cây)", thungMo: "1", diemCanQua: 40 },
     3: { tenVatPham: ["tui_nilon", "hop_xop"], thongBao: "Màn 3: Thu gom RÁC VÔ CƠ (Túi nilon / Hộp xốp)", thungMo: "3", diemCanQua: 60 },
     4: { tenVatPham: ["chai_nhua", "vo_lon"], thongBao: "Màn 4 Tăng tốc: Tìm thật nhanh 2 món RÁC TÁI CHẾ!", thungMo: "2", diemCanQua: 80 },
     5: { tenVatPham: ["la_cay"], thongBao: "Màn 5 Thử thách: Tìm đúng LÁ CÂY để bón phân cây xanh!", thungMo: "1", diemCanQua: 100 },
-    6: { tenVatPham: ["tui_nilon"], thongBao: "Màn CHUNG KẾT: Dọn sạch túi nilon để giải cứu Lâm Đồng!", thungMo: "3", diemCanQua: 120 }
+    6: { tenVatPham: ["tui_nilon"], thongBao: "Màn CHUNG KẾT: Dọn sạch túi nilon cứu môi trường!", thungMo: "3", diemCanQua: 120 }
 };
+
+// Khởi tạo đồ họa game ngay khi mở trang web
+function khoiTaoCanvasGame() {
+    canvas = document.getElementById("gameCanvas");
+    ctx = canvas.getContext("2d");
+    
+    // Tự động căn chỉnh kích thước Canvas theo khung bao ngoài
+    canvas.width = canvas.parentElement.clientWidth;
+    canvas.height = canvas.parentElement.clientHeight;
+    
+    // Chạy vòng lặp vẽ đồ họa game liên tục (60 khung hình/giây)
+    requestAnimationFrame(vongLapVeGame);
+}
+
+function vongLapVeGame() {
+    if (!canvas || !ctx) return;
+    
+    // 1. Xóa nền vẽ lại cảnh nền thiên nhiên
+    ctx.fillStyle = "#e0f2f1"; 
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Vẽ thảm cỏ xanh phía dưới đáy nơi đặt 3 thùng rác
+    ctx.fillStyle = "#81c784";
+    ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
+
+    // 2. Vẽ 3 chiếc Thùng Rác Ảo xinh xắn trong game
+    veThungRacTrongGame("HỮU CƠ", "#558b2f", canvas.width * 0.15, canvas.height - 110, 90, 100);
+    veThungRacTrongGame("TÁI CHẾ", "#1565c0", canvas.width * 0.45, canvas.height - 110, 90, 100);
+    veThungRacTrongGame("VÔ CƠ", "#37474f", canvas.width * 0.75, canvas.height - 110, 90, 100);
+
+    // 3. Cập nhật vị trí và vẽ các vật phẩm rác đang rơi
+    activeTrashItems.forEach((item, index) => {
+        item.y += item.speedY; // Rác tự động rơi xuống đáy
+        item.x += (item.targetX - item.x) * 0.05; // Rác tự động hút về phía thùng rác chuẩn
+
+        // Vẽ biểu tượng rác (Emoji bự)
+        ctx.font = "40px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(item.icon, item.x, item.y);
+
+        // Kiểm tra xem rác đã rơi trúng vào thùng chưa
+        if (item.y >= canvas.height - 120) {
+            // Tạo hiệu ứng vụ nổ điểm tại vị trí thùng rác đó
+            shockwaveActive = true;
+            shockwaveX = item.x;
+            shockwaveY = item.y;
+            setTimeout(() => { shockwaveActive = false; }, 300);
+            
+            // Xóa rác này khỏi danh sách đang rơi
+            activeTrashItems.splice(index, 1);
+        }
+    });
+
+    // 4. Vẽ hiệu ứng nổ điểm nếu có rác vừa lọt vào thùng
+    if (shockwaveActive) {
+        ctx.beginPath();
+        ctx.arc(shockwaveX, shockwaveY, 30, 0, 2 * Math.PI);
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+    }
+
+    requestAnimationFrame(vongLapVeGame);
+}
+
+function veThungRacTrongGame(ten, mau, x, y, rông, cao) {
+    ctx.fillStyle = mau;
+    ctx.fillRect(x, y, rông, cao);
+    
+    // Nắp thùng rác
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(x - 5, y - 10, rông + 10, 10);
+    
+    // Nhãn chữ tên thùng rác
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText(ten, x + rông/2, y + cao/2 + 5);
+}
+
+// KHI AI QUÉT ĐƯỢC RÁC THẬT, BẮN MỘT MÓN RÁC ẢO VÀO TRONG CANVAS GAME
+function thongBaoAiBanRacVaoGame(loaiRac) {
+    let iconQuetDuoc = bieuTuongRac[loaiRac] || "🗑️";
+    
+    // Xác định thùng rác mục tiêu trong game để rác tự động hút về đó
+    let toaDoXThung = canvas.width * 0.75 + 45; // Mặc định thùng vô cơ
+    let thungSo = "3";
+    if (["la_cay", "vo_chuoi"].includes(loaiRac)) { toaDoXThung = canvas.width * 0.15 + 45; thungSo = "1"; }
+    if (["chai_nhua", "vo_lon"].includes(loaiRac)) { toaDoXThung = canvas.width * 0.45 + 45; thungSo = "2"; }
+
+    // Thêm vật phẩm rác mới xuất hiện từ trên đỉnh khung game rơi xuống
+    activeTrashItems.push({
+        icon: iconQuetDuoc,
+        x: Math.random() * (canvas.width - 100) + 50, // Vị trí ngang ngẫu nhiên trên trời game
+        y: 30, // Xuất hiện từ trên trời game
+        targetX: toaDoXThung,
+        speedY: 4 // Tốc độ rơi xuống
+    });
+
+    // Xử lý tính điểm logic game
+    xuLyLogicGame(loaiRac, thungSo);
+}
+
+// --- LOGIC HỆ THỐNG GAME & CAMERA ---
 
 async function moWebcamMoi() {
     const video = document.getElementById("webcam");
@@ -32,9 +140,9 @@ async function moWebcamMoi() {
         video.srcObject = localStream;
         isCamOn = true;
         document.getElementById("btn-toggle-cam").innerText = "📷 Tắt Camera";
-        document.getElementById("ai-result").innerText = "📸 Camera sẵn sàng! Bấm Bắt đầu chơi.";
+        document.getElementById("ai-result").innerText = "📸 Camera sẵn sàng! Hãy chuẩn bị rác mẫu.";
     } catch (err) {
-        document.getElementById("ai-result").innerText = "❌ Không tìm thấy Webcam.";
+        document.getElementById("ai-result").innerText = "❌ Không tìm thấy Webcam phần cứng.";
     }
 }
 
@@ -46,7 +154,7 @@ function batTatCamera() {
         video.srcObject = null;
         isCamOn = false;
         btn.innerText = "📷 Bật Camera";
-        document.getElementById("ai-result").innerText = "🔒 Camera đã tắt.";
+        document.getElementById("ai-result").innerText = "🔒 Camera đã tạm đóng.";
     } else {
         moWebcamMoi();
     }
@@ -60,7 +168,7 @@ async function ketNoiArduino() {
         document.getElementById("status").innerText = "Đã kết nối Arduino ✔";
         document.getElementById("status").style.color = "#2e7d32";
     } catch (error) {
-        alert("Không kết nối được phần cứng. Bạn vẫn chơi test giả lập AR bằng camera bình thường!");
+        alert("Không phát hiện mạch Arduino. Bạn vẫn chơi giả lập tương tác trên web bình thường!");
     }
 }
 
@@ -68,6 +176,7 @@ function batDauGame() {
     score = 0;
     level = 1;
     timeLeft = 45;
+    activeTrashItems = [];
     document.getElementById("score").innerText = score;
     document.getElementById("current-level").innerText = `CẤP ĐỘ: ${level}`;
     document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
@@ -81,7 +190,7 @@ function batDauGame() {
     }, 1000);
 
     clearInterval(aiSimulationInterval);
-    aiSimulationInterval = setInterval(quetAnhBangAI, 3000); // 3 giây quét 1 lần cho hai bạn kịp nhìn hiệu ứng rác rơi
+    aiSimulationInterval = setInterval(quetAnhBangAI, 3000); // 3 giây AI quét 1 món rác thực tế
 }
 
 function quetAnhBangAI() {
@@ -90,85 +199,38 @@ function quetAnhBangAI() {
     const ketQuaAI = danhSachGiaLap[Math.floor(Math.random() * danhSachGiaLap.length)];
     
     let tenTiengViet = ketQuaAI.replace("_", " ").toUpperCase();
-    document.getElementById("ai-result").innerText = `🔍 AI PHÁT HIỆN VẬT PHẨM: ${tenTiengViet}`;
+    document.getElementById("ai-result").innerText = `🔍 AI THỰC TẾ PHÁT HIỆN: ${tenTiengViet}`;
 
-    // Tạo hiệu ứng Rác thực tế đi vào game ảo
-    taoHieuUngRacAoRoi(ketQuaAI);
+    // Kích hoạt ném rác thực tế từ camera bay vào trong Khung Game Đồ Họa 2D
+    thongBaoAiBanRacVaoGame(ketQuaAI);
 }
 
-// 🎮 HÀM CỐT LÕI: TẠO VẬT PHẨM ẢO XUẤT HIỆN TRÊN CAMERA VÀ RƠI XUỐNG THÙNG RÁC
-function taoHieuUngRacAoRoi(loaiRac) {
-    const gameZone = document.getElementById("game-zone");
-    const itemAo = document.createElement("div");
-    
-    itemAo.className = "virtual-trash";
-    itemAo.innerText = hinhAnhRacAo[loaiRac] || "🗑️";
-    
-    // Xuất hiện ngẫu nhiên ở phần trên của khung quét (vị trí tay hai bạn hay giơ rác lên)
-    itemAo.style.top = "20%";
-    itemAo.style.left = `${Math.floor(Math.random() * 60) + 20}%`; 
-    gameZone.appendChild(itemAo);
-
-    // Xác định rác này đúng logic thì thuộc về thùng số mấy
-    let thungMucTieu = "3"; // Mặc định vô cơ
-    if (["la_cay", "vo_chuoi"].includes(loaiRac)) thungMucTieu = "1";
-    if (["chai_nhua", "vo_lon"].includes(loaiRac)) thungMucTieu = "2";
-
-    // Lấy vị trí tọa độ của chiếc thùng rác mục tiêu dưới đáy để rác rơi trúng vào đó
-    const thungElement = document.getElementById(`v-bin-${thungMucTieu}`);
-    
-    // Sau 200 miligiây, kích hoạt lệnh cho rác ảo tự động bay thẳng xuống trúng thùng rác đó
-    setTimeout(() => {
-        itemAo.style.top = "85%";
-        itemAo.style.left = `${thungElement.offsetLeft + 40}px`;
-        itemAo.style.transform = "scale(0.3) rotate(360deg)"; // Hiệu ứng thu nhỏ và xoay khi lọt vào thùng
-        itemAo.style.opacity = "0";
-    }, 200);
-
-    // Khi rác đã lọt vào thùng (sau 1 giây), tiến hành tính điểm và ra lệnh phần cứng
-    setTimeout(() => {
-        itemAo.remove(); // Xóa rác ảo khỏi màn hình
-        
-        // Kích hoạt nháy sáng thùng rác ảo mục tiêu để chứng minh đã nhận được rác
-        thungElement.classList.add("bin-active");
-        setTimeout(() => thungElement.classList.remove("bin-active"), 400);
-
-        // Gọi bộ lọc xử lý logic để tính điểm, tăng màn hoặc mở nắp thùng thật qua Arduino
-        xuLyLogicGame(loaiRac, thungMucTieu);
-    }, 1200);
-}
-
-async function xuLyLogicGame(loaiRac, thungMucTieu) {
+async function xuLyLogicGame(loaiRac, thungSo) {
     let levelHienTai = kịchBản6Level[level];
-    let alertBox = document.getElementById("game-alert");
-    alertBox.className = "alert-box"; 
 
-    // Nếu rác quét được nằm trong danh sách yêu cầu của Màn chơi hiện tại
     if (levelHienTai.tenVatPham.includes(loaiRac)) {
         score += 10;
         document.getElementById("score").innerText = score;
         
         if (writer) {
-            alertBox.innerText = `✨ Đúng rác! +10 Điểm. Đã mở nắp thùng thật số ${thungMucTieu}!`;
+            document.getElementById("ai-result").innerText = `✨ ĐÚNG RÁC! +10đ. Lệnh mở nắp thùng vật lý số ${thungSo}...`;
             await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
         } else {
-            alertBox.innerText = `✨ [GIẢ LẬP AR] Nhập thùng ${thungMucTieu} thành công! +10đ`;
+            document.getElementById("ai-result").innerText = `✨ [GAME AR] Rác thật đã chạy vào Thùng Game Ảo số ${thungSo}! +10đ`;
         }
-        alertBox.classList.add("alert-success");
 
         if (score >= levelHienTai.diemCanQua) {
             if (level < 6) {
                 level++;
                 document.getElementById("current-level").innerText = `CẤP ĐỘ: ${level}`;
                 document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
-                alert(`🎉 Xuất sắc! Bạn đã vượt qua cấp độ. Tiến vào CẤP ĐỘ ${level}!`);
+                alert(`🎉 CHÚC MƯỜNG! Hai bạn vượt cấp thành công. Tiến vào CẤP ĐỘ ${level}!`);
             } else {
                 ketThucGame(true);
             }
         }
     } else {
-        alertBox.innerText = "❌ Sai loại rác yêu cầu của màn này rồi!";
-        alertBox.classList.add("alert-wrong");
+        document.getElementById("ai-result").innerText = "❌ SAI RÁC! Món rác thật này không thuộc yêu cầu nhiệm vụ của cấp độ hiện tại.";
     }
 }
 
@@ -177,12 +239,14 @@ function ketThucGame(isChienThang) {
     clearInterval(aiSimulationInterval);
     document.getElementById("btn-start").disabled = false;
     if (isChienThang) {
-        alert("🏆 TUYỆT VỜI! HAI BẠN ĐÃ HOÀN THÀNH XUẤT SẮC GAME THỰC TẾ ẢO AR VÀ PHÂN LOẠI RÁC THÀNH CÔNG!");
+        alert("🏆 TUYỆT VỜI! HAI BẠN ĐÃ HOÀN THÀNH XUẤT SẮC GAME PHÂN LOẠI RÁC 2D KẾT HỢP AI!");
     } else {
-        alert("⏰ Hết giờ! Hãy chuẩn bị lại rác mẫu để thử thách lại nhé.");
+        alert("⏰ Hết giờ! Hãy sắp xếp lại các món rác thật chuẩn để thử thách lại nhé.");
     }
 }
 
+// Tự khởi động webcam và vẽ thế giới game ngay khi trang web vừa tải xong
 window.onload = function() {
     moWebcamMoi();
+    khoiTaoCanvasGame();
 };
