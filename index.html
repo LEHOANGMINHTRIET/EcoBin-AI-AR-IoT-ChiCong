@@ -51,13 +51,13 @@
         
         .content-grid {
             display: grid;
-            grid-template-columns: 1.1fr 0.9fr; /* Cân bằng giữa Khung Game đồ họa và Khung Camera */
+            grid-template-columns: 1.1fr 0.9fr;
             gap: 25px;
             flex-grow: 1;
             height: calc(100% - 120px);
         }
         
-        /* KHU VỰC KHUNG GAME ĐỒ HỌA TRỰC QUAN */
+        /* 🎮 KHU VỰC THIẾT KẾ PHONG CÁCH GAME GỐC CỦA BẠN */
         .game-panel {
             display: flex;
             flex-direction: column;
@@ -67,22 +67,83 @@
             border-radius: 20px;
             padding: 15px;
         }
-        .game-canvas-wrapper {
+        .game-display-wrapper {
             width: 100%;
             flex-grow: 1;
-            background: #e0f2f1; /* Màu nền công viên xanh dịu */
+            background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 70%, #add8e6 100%); /* Nền bầu trời xanh */
             border-radius: 15px;
             border: 3px solid #004d40;
             position: relative;
             overflow: hidden;
         }
-        #gameCanvas {
+
+        /* Thêm các đám mây trang trí phía sau nền game */
+        .game-cloud {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.8.5);
+            border-radius: 50px;
+            pointer-events: none;
+        }
+        .cloud-1 { width: 100px; height: 35px; top: 20px; left: 15%; }
+        .cloud-2 { width: 140px; height: 45px; top: 50px; right: 20%; }
+
+        /* B bãi cỏ đáy mượt mà sát nhau giống game của bạn */
+        .game-bins-footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
             width: 100%;
-            height: 100%;
-            display: block;
+            height: 150px;
+            background: linear-gradient(to bottom, #7cd175 0%, #4caf50 100%); /* Thảm cỏ xanh đậm */
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            padding: 0 5px 15px 5px;
+            border-top: 4px solid #2e7d32;
         }
         
-        /* KHU VỰC KHUNG CAMERA AI */
+        /* Thiết kế lại dáng thùng rác lớn, bo tròn bo góc cực đẹp */
+        .g-bin {
+            width: 110px;
+            height: 125px;
+            border-radius: 15px 15px 8px 8px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 13px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+            position: relative;
+            transition: transform 0.15s ease-out;
+            border-bottom: 8px solid rgba(0,0,0,0.2); /* Tạo khối đế dày */
+        }
+        .g-bin i { font-size: 38px; margin-bottom: 8px; }
+        
+        .g-bin-organic { background: #388e3c; border: 3px solid #81c784; }   /* Xanh lá - Hữu cơ */
+        .g-bin-recycle { background: #1976d2; border: 3px solid #64b5f6; }   /* Xanh dương - Tái chế */
+        .g-bin-inorganic { background: #455a64; border: 3px solid #90a4ae; } /* Xám đen - Vô cơ */
+        
+        /* Hiệu ứng nhún nhảy đàn hồi khi đón rác rơi xuống */
+        .bin-bounce {
+            transform: scale(1.18) translateY(-5px);
+            box-shadow: 0 0 25px #ffffff;
+        }
+
+        /* Vật phẩm rác rơi tự do phóng to hơn dễ nhìn */
+        .falling-trash {
+            position: absolute;
+            font-size: 50px;
+            z-index: 10;
+            top: -70px;
+            left: 50%;
+            transform: translateX(-50%);
+            filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.15));
+            transition: top 1.1s cubic-bezier(0.25, 0.46, 0.45, 0.94), left 1.1s ease-in-out, transform 1.1s;
+        }
+        
+        /* 📸 KHU VỰC CAMERA AI */
         .camera-panel {
             background: #ffffff; border: 3px solid #81c784;
             border-radius: 20px; padding: 15px;
@@ -99,7 +160,6 @@
         }
         #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        /* Khung nét đứt quét rác */
         .scan-overlay-large {
             position: absolute;
             top: 8%; left: 8%; width: 84%; height: 84%;
@@ -116,7 +176,6 @@
             50% { top: 91%; }
         }
 
-        /* KHU VỰC THÔNG SỐ ĐIỂM SỐ NẰM GỌN PHÍA DƯỚI */
         .status-bar-bottom {
             display: grid;
             grid-template-columns: 1.5fr 1fr 1fr;
@@ -164,8 +223,25 @@
     <div class="content-grid">
         <div class="game-panel">
             <div style="font-weight:bold; color:#1b5e20; font-size:16px;"><i class="fa-solid fa-gamepad"></i> THẾ GIỚI GAME PHÂN LOẠI RÁC ẢO</div>
-            <div class="game-canvas-wrapper">
-                <canvas id="gameCanvas"></canvas>
+            
+            <div class="game-display-wrapper" id="gameDisplay">
+                <div class="game-cloud cloud-1" style="background: white; border-radius: 50% / 50%;"></div>
+                <div class="game-cloud cloud-2" style="background: white; border-radius: 50% / 50%;"></div>
+                
+                <div class="game-bins-footer">
+                    <div class="g-bin g-bin-organic" id="g-bin-1">
+                        <i class="fa-solid fa-apple-whole"></i>
+                        <span>HỮU CƠ</span>
+                    </div>
+                    <div class="g-bin g-bin-recycle" id="g-bin-2">
+                        <i class="fa-solid fa-bottle-water"></i>
+                        <span>TÁI CHẾ</span>
+                    </div>
+                    <div class="g-bin g-bin-inorganic" id="g-bin-3">
+                        <i class="fa-solid fa-dumpster"></i>
+                        <span>VÔ CƠ</span>
+                    </div>
+                </div>
             </div>
             
             <div class="status-bar-bottom">
