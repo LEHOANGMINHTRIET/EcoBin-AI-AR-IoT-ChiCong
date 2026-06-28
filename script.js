@@ -5,10 +5,17 @@ let level = 1;
 let timeLeft = 45;
 let gameInterval;
 let aiSimulationInterval;
-let localStream = null; // Biến lưu trữ luồng camera để tắt/mở
+let localStream = null;
 let isCamOn = true;
 
-// Định nghĩa cấu trúc yêu cầu của cả 6 Cấp độ
+// Khai báo các Emoji đại diện cho rác để hiển thị rác ảo rơi trên màn hình
+const hinhAnhRacAo = {
+    "chai_nhua": "🍾", "vo_lon": "🥫", 
+    "la_cay": "🍃", "vo_chuoi": "🍌", 
+    "tui_nilon": "🛍️", "hop_xop": "📦",
+    "rac_doc_hai": "🔋"
+};
+
 const kịchBản6Level = {
     1: { tenVatPham: ["chai_nhua", "vo_lon"], thongBao: "Màn 1: Thu gom RÁC TÁI CHẾ (Chai nhựa / Vỏ lon nhôm)", thungMo: "2", diemCanQua: 20 },
     2: { tenVatPham: ["la_cay", "vo_chuoi"], thongBao: "Màn 2: Thu gom RÁC HỮU CƠ (Lá cây / Vỏ trái cây)", thungMo: "1", diemCanQua: 40 },
@@ -18,7 +25,6 @@ const kịchBản6Level = {
     6: { tenVatPham: ["tui_nilon"], thongBao: "Màn CHUNG KẾT: Dọn sạch túi nilon để giải cứu Lâm Đồng!", thungMo: "3", diemCanQua: 120 }
 };
 
-// 1. HÀM MỞ WEBCAM KHI VÀO TRANG WEB
 async function moWebcamMoi() {
     const video = document.getElementById("webcam");
     try {
@@ -26,110 +32,130 @@ async function moWebcamMoi() {
         video.srcObject = localStream;
         isCamOn = true;
         document.getElementById("btn-toggle-cam").innerText = "📷 Tắt Camera";
-        document.getElementById("btn-toggle-cam").style.background = "#616161";
-        document.getElementById("ai-result").innerText = "📸 Camera đã bật! Có thể bấm Bắt đầu chơi thử ngay.";
+        document.getElementById("ai-result").innerText = "📸 Camera sẵn sàng! Bấm Bắt đầu chơi.";
     } catch (err) {
-        console.error("Lỗi mở camera: ", err);
         document.getElementById("ai-result").innerText = "❌ Không tìm thấy Webcam.";
     }
 }
 
-// 2. HÀM CHỦ ĐỘNG BẬT / TẮT CAMERA THEO YÊU CẦU
 function batTatCamera() {
     const video = document.getElementById("webcam");
     const btn = document.getElementById("btn-toggle-cam");
-
     if (isCamOn && localStream) {
-        // Tắt tất cả các luồng của camera
-        let tracks = localStream.getTracks();
-        tracks.forEach(track => track.stop());
+        localStream.getTracks().forEach(track => track.stop());
         video.srcObject = null;
         isCamOn = false;
         btn.innerText = "📷 Bật Camera";
-        btn.style.background = "#4caf50";
-        document.getElementById("ai-result").innerText = "🔒 Camera đã tạm tắt.";
+        document.getElementById("ai-result").innerText = "🔒 Camera đã tắt.";
     } else {
-        // Bật lại camera
         moWebcamMoi();
     }
 }
 
-// 3. KẾT NỐI MẠCH ARDUINO (NẾU CÓ)
 async function ketNoiArduino() {
     try {
         port = await navigator.serial.requestPort();
         await port.open({ baudRate: 9600 });
         writer = port.writable.getWriter();
-        
-        document.getElementById("status").innerText = "Trạng thái: Đã kết nối Thùng Rác thành công! ✔";
+        document.getElementById("status").innerText = "Đã kết nối Arduino ✔";
         document.getElementById("status").style.color = "#2e7d32";
-        document.getElementById("mission").innerText = "Phần cứng đã sẵn sàng! Bấm Bắt đầu thử thách ngay.";
     } catch (error) {
-        alert("Không thể kết nối cổng COM phần cứng. Bạn vẫn có thể chơi thử nghiệm bằng Camera!");
-        console.error(error);
+        alert("Không kết nối được phần cứng. Bạn vẫn chơi test giả lập AR bằng camera bình thường!");
     }
 }
 
-// 4. KHỞI ĐỘNG TRẬN ĐẤU (Bấm chơi được luôn dù chưa có Arduino)
 function batDauGame() {
     score = 0;
     level = 1;
     timeLeft = 45;
-    
     document.getElementById("score").innerText = score;
     document.getElementById("current-level").innerText = `CẤP ĐỘ: ${level}`;
     document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
     document.getElementById("btn-start").disabled = true;
 
-    // Chạy đồng hồ đếm ngược
     clearInterval(gameInterval);
     gameInterval = setInterval(() => {
         timeLeft--;
         document.getElementById("timer").innerText = timeLeft;
-        if (timeLeft <= 0) {
-            ketThucGame(false);
-        }
+        if (timeLeft <= 0) ketThucGame(false);
     }, 1000);
 
-    // Chạy vòng quét giả lập AI nhận diện vật phẩm từ camera
     clearInterval(aiSimulationInterval);
-    aiSimulationInterval = setInterval(quetAnhBangAI, 2500);
+    aiSimulationInterval = setInterval(quetAnhBangAI, 3000); // 3 giây quét 1 lần cho hai bạn kịp nhìn hiệu ứng rác rơi
 }
 
-// 5. VÒNG LẶP QUÉT AI GIẢ LẬP ĐỂ TEST ĐIỂM SỐ VÀ LEVEL
 function quetAnhBangAI() {
     if (timeLeft <= 0) return;
-
-    // Danh sách rác mẫu để AI tự bốc quét ngẫu nhiên trước ống kính
-    const danhSachGiaLap = ["chai_nhua", "la_cay", "tui_nilon", "vo_chuoi", "hop_xop", "rac_doc_hai"];
+    const danhSachGiaLap = ["chai_nhua", "la_cay", "tui_nilon", "vo_chuoi", "hop_xop", "vo_lon"];
     const ketQuaAI = danhSachGiaLap[Math.floor(Math.random() * danhSachGiaLap.length)];
     
     let tenTiengViet = ketQuaAI.replace("_", " ").toUpperCase();
     document.getElementById("ai-result").innerText = `🔍 AI PHÁT HIỆN VẬT PHẨM: ${tenTiengViet}`;
 
-    kiemTraPhanLoaiHợpLe(ketQuaAI);
+    // Tạo hiệu ứng Rác thực tế đi vào game ảo
+    taoHieuUngRacAoRoi(ketQuaAI);
 }
 
-// 6. BỘ XỬ LÝ LOGIC CHÍNH CHO 6 LEVEL 
-async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
+// 🎮 HÀM CỐT LÕI: TẠO VẬT PHẨM ẢO XUẤT HIỆN TRÊN CAMERA VÀ RƠI XUỐNG THÙNG RÁC
+function taoHieuUngRacAoRoi(loaiRac) {
+    const gameZone = document.getElementById("game-zone");
+    const itemAo = document.createElement("div");
+    
+    itemAo.className = "virtual-trash";
+    itemAo.innerText = hinhAnhRacAo[loaiRac] || "🗑️";
+    
+    // Xuất hiện ngẫu nhiên ở phần trên của khung quét (vị trí tay hai bạn hay giơ rác lên)
+    itemAo.style.top = "20%";
+    itemAo.style.left = `${Math.floor(Math.random() * 60) + 20}%`; 
+    gameZone.appendChild(itemAo);
+
+    // Xác định rác này đúng logic thì thuộc về thùng số mấy
+    let thungMucTieu = "3"; // Mặc định vô cơ
+    if (["la_cay", "vo_chuoi"].includes(loaiRac)) thungMucTieu = "1";
+    if (["chai_nhua", "vo_lon"].includes(loaiRac)) thungMucTieu = "2";
+
+    // Lấy vị trí tọa độ của chiếc thùng rác mục tiêu dưới đáy để rác rơi trúng vào đó
+    const thungElement = document.getElementById(`v-bin-${thungMucTieu}`);
+    
+    // Sau 200 miligiây, kích hoạt lệnh cho rác ảo tự động bay thẳng xuống trúng thùng rác đó
+    setTimeout(() => {
+        itemAo.style.top = "85%";
+        itemAo.style.left = `${thungElement.offsetLeft + 40}px`;
+        itemAo.style.transform = "scale(0.3) rotate(360deg)"; // Hiệu ứng thu nhỏ và xoay khi lọt vào thùng
+        itemAo.style.opacity = "0";
+    }, 200);
+
+    // Khi rác đã lọt vào thùng (sau 1 giây), tiến hành tính điểm và ra lệnh phần cứng
+    setTimeout(() => {
+        itemAo.remove(); // Xóa rác ảo khỏi màn hình
+        
+        // Kích hoạt nháy sáng thùng rác ảo mục tiêu để chứng minh đã nhận được rác
+        thungElement.classList.add("bin-active");
+        setTimeout(() => thungElement.classList.remove("bin-active"), 400);
+
+        // Gọi bộ lọc xử lý logic để tính điểm, tăng màn hoặc mở nắp thùng thật qua Arduino
+        xuLyLogicGame(loaiRac, thungMucTieu);
+    }, 1200);
+}
+
+async function xuLyLogicGame(loaiRac, thungMucTieu) {
     let levelHienTai = kịchBản6Level[level];
     let alertBox = document.getElementById("game-alert");
-    alertBox.className = ""; 
+    alertBox.className = "alert-box"; 
 
-    if (levelHienTai.tenVatPham.includes(vatPhamQuetDuoc)) {
+    // Nếu rác quét được nằm trong danh sách yêu cầu của Màn chơi hiện tại
+    if (levelHienTai.tenVatPham.includes(loaiRac)) {
         score += 10;
         document.getElementById("score").innerText = score;
         
-        // Thêm chữ thông báo cho hai bạn biết hệ thống đang test giả lập mượt mà
         if (writer) {
-            alertBox.innerText = "✨ Chính xác! +10 Điểm. Đang lệnh mở nắp thùng vật lý...";
+            alertBox.innerText = `✨ Đúng rác! +10 Điểm. Đã mở nắp thùng thật số ${thungMucTieu}!`;
             await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
         } else {
-            alertBox.innerText = "✨ [TEST GIẢ LẬP] Chính xác! +10 Điểm. (Thùng rác ảo đã mở)";
+            alertBox.innerText = `✨ [GIẢ LẬP AR] Nhập thùng ${thungMucTieu} thành công! +10đ`;
         }
         alertBox.classList.add("alert-success");
 
-        // KIỂM TRA ĐIỀU KIỆN CHUYỂN LEVEL (1 ĐẾN 6)
         if (score >= levelHienTai.diemCanQua) {
             if (level < 6) {
                 level++;
@@ -141,27 +167,22 @@ async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
             }
         }
     } else {
-        alertBox.innerText = "❌ Sai rồi! Vật phẩm này không thuộc nhóm rác đang yêu cầu.";
+        alertBox.innerText = "❌ Sai loại rác yêu cầu của màn này rồi!";
         alertBox.classList.add("alert-wrong");
     }
 }
 
-// 7. HÀM KẾT THÚC TRẬN ĐẤU
 function ketThucGame(isChienThang) {
     clearInterval(gameInterval);
     clearInterval(aiSimulationInterval);
-    document.getElementById("btn-start").disabled = false; // Mở lại nút để chơi tiếp ván mới
-    
+    document.getElementById("btn-start").disabled = false;
     if (isChienThang) {
-        alert("🏆 CHÚC MỪNG! BẠN ĐÃ VƯỢT QUA CẢ 6 CẤP ĐỘ VÀ BẢO VỆ MÔI TRƯỜNG THÀNH CÔNG!");
+        alert("🏆 TUYỆT VỜI! HAI BẠN ĐÃ HOÀN THÀNH XUẤT SẮC GAME THỰC TẾ ẢO AR VÀ PHÂN LOẠI RÁC THÀNH CÔNG!");
     } else {
-        alert("⏰ Hết giờ! Hãy chuẩn bị lại các món rác thật chuẩn xác để thử thách lại nhé.");
+        alert("⏰ Hết giờ! Hãy chuẩn bị lại rác mẫu để thử thách lại nhé.");
     }
 }
 
-// TỰ ĐỘNG BẬT CAMERA VÀ MỞ KHÓA NÚT CHƠI KHI VỪA VÀO TRANG WEB
 window.onload = function() {
     moWebcamMoi();
-    document.getElementById("btn-start").disabled = false; // Bật nút Bắt đầu lên ngay lập tức!
-    document.getElementById("mission").innerText = "Hệ thống giả lập đã sẵn sàng! Bấm Bắt đầu thử thách để test 6 Level.";
 };
