@@ -15,7 +15,7 @@
             background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
             font-family: 'Lato', sans-serif;
             margin: 0;
-            padding: 10px;
+            padding: 15px;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -23,8 +23,8 @@
         }
         .main-card {
             background: white;
-            width: 1250px;
-            height: 780px;
+            width: 1280px;
+            height: 760px;
             border-radius: 25px;
             box-shadow: 0 20px 50px rgba(0,0,0,0.1);
             padding: 25px;
@@ -40,9 +40,9 @@
         }
         .header-title h1 {
             font-family: 'Poppins', sans-serif;
-            color: #2e7d32; font-size: 30px; margin: 0;
+            color: #2e7d32; font-size: 28px; margin: 0;
         }
-        .header-title p { color: #66bb6a; margin: 3px 0 0 0; font-weight: bold; font-size: 14px;}
+        .header-title p { color: #66bb6a; margin: 3px 0 0 0; font-weight: bold; font-size: 13px;}
         
         .arduino-status {
             background: #f1f8e9; padding: 8px 15px; border-radius: 50px;
@@ -51,39 +51,42 @@
         
         .content-grid {
             display: grid;
-            grid-template-columns: 1fr 1.6fr; /* Mở rộng tối đa cho cột camera */
-            gap: 20px;
+            grid-template-columns: 1.1fr 0.9fr; /* Cân bằng giữa Khung Game đồ họa và Khung Camera */
+            gap: 25px;
             flex-grow: 1;
-            height: calc(100% - 130px);
+            height: calc(100% - 120px);
         }
         
-        .info-panel { display: flex; flex-direction: column; gap: 15px; }
-        .level-card {
-            background: #2e7d32; color: white; padding: 15px;
-            border-radius: 15px; text-align: center;
+        /* KHU VỰC KHUNG GAME ĐỒ HỌA TRỰC QUAN */
+        .game-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #ffffff;
+            border: 3px solid #4caf50;
+            border-radius: 20px;
+            padding: 15px;
         }
-        .level-card h2 { margin: 0; font-family: 'Poppins'; font-size: 26px; }
-        
-        .mission-card {
-            background: #fff9c4; border-left: 8px solid #fbc02d;
-            padding: 15px; border-radius: 0 15px 15px 0;
+        .game-canvas-wrapper {
+            width: 100%;
+            flex-grow: 1;
+            background: #e0f2f1; /* Màu nền công viên xanh dịu */
+            border-radius: 15px;
+            border: 3px solid #004d40;
+            position: relative;
+            overflow: hidden;
         }
-        .mission-card h3 { color: #f57f17; margin: 0 0 5px 0; font-size: 15px; }
-        .mission-card p { font-size: 16px; font-weight: 700; margin: 0; color: #333; }
-        
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .stat-item {
-            background: #f9f9f9; border: 2px solid #e0e0e0;
-            padding: 10px; border-radius: 15px; text-align: center;
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
-        .stat-value { font-size: 32px; font-weight: 900; color: #2e7d32; display: block; }
-        .stat-label { font-size: 11px; color: #888; text-transform: uppercase; }
         
-        /* KHU VỰC CAMERA TRÀN VIỀN */
+        /* KHU VỰC KHUNG CAMERA AI */
         .camera-panel {
             background: #ffffff; border: 3px solid #81c784;
             border-radius: 20px; padding: 15px;
-            display: flex; flex-direction: column; gap: 10px; position: relative;
+            display: flex; flex-direction: column; gap: 12px;
         }
         .video-container {
             width: 100%;
@@ -96,54 +99,34 @@
         }
         #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        /* Khung quét chiếm gần hết camera */
+        /* Khung nét đứt quét rác */
         .scan-overlay-large {
             position: absolute;
-            top: 5%; left: 5%; width: 90%; height: 60%;
+            top: 8%; left: 8%; width: 84%; height: 84%;
             border: 4px dashed #00e676; border-radius: 15px;
             pointer-events: none; z-index: 5;
         }
         .scan-line {
-            position: absolute; top: 5%; left: 5%; width: 90%; height: 4px;
+            position: absolute; top: 8%; left: 8%; width: 84%; height: 4px;
             background: #00e676; box-shadow: 0 0 15px #00e676;
             animation: moveScanLarge 3s infinite linear; z-index: 6;
         }
         @keyframes moveScanLarge {
-            0%, 100% { top: 6%; }
-            50% { top: 64%; }
+            0%, 100% { top: 9%; }
+            50% { top: 91%; }
         }
 
-        /* THẾ GIỚI PHÂN LOẠI RÁC ẢO (VÙNG PHÍA DƯỚI CAMERA) */
-        .game-overlay-zone {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; z-index: 8; overflow: hidden;
+        /* KHU VỰC THÔNG SỐ ĐIỂM SỐ NẰM GỌN PHÍA DƯỚI */
+        .status-bar-bottom {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            gap: 15px;
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 12px;
+            font-weight: bold;
         }
-        .virtual-bins-container {
-            position: absolute; bottom: 0; left: 0; width: 100%;
-            display: grid; grid-template-columns: 1fr 1fr 1fr;
-            padding: 10px; gap: 20px; pointer-events: auto;
-            background: rgba(38, 50, 56, 0.6); /* Nền mờ cho thùng rác nổi bật */
-        }
-        .v-bin {
-            padding: 12px; border-radius: 10px; color: white;
-            text-align: center; font-weight: bold; font-size: 14px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s;
-        }
-        .v-bin i { font-size: 24px; display: block; margin-bottom: 5px; }
-        .bin-organic { background: #558b2f; border: 2px solid #81c784; } /* Thùng 1 */
-        .bin-recycle { background: #1565c0; border: 2px solid #64b5f6; } /* Thùng 2 */
-        .bin-inorganic { background: #37474f; border: 2px solid #78909c; } /* Thùng 3 */
-        .bin-active { transform: scale(1.1); box-shadow: 0 0 20px #fff; }
-
-        /* Vật phẩm rác ảo rơi xuống */
-        .virtual-trash {
-            position: absolute; width: 50px; height: 50px;
-            background-size: contain; background-repeat: no-repeat; background-position: center;
-            z-index: 9; transition: all 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            display: flex; align-items: center; justify-content: center;
-            font-size: 30px; /* Dùng emoji làm hình rác cho mượt */
-        }
-
+        
         .btn-main {
             background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
             color: white; border: none; padding: 12px 35px; border-radius: 50px;
@@ -156,15 +139,10 @@
             border-radius: 20px; cursor: pointer; font-size: 12px;
         }
         #ai-result {
-            background: #e3f2fd; color: #1565c0; padding: 10px;
-            border-radius: 10px; font-weight: bold; font-size: 15px; border: 1px solid #bbdefb;
+            background: #fff3e0; color: #e65100; padding: 10px;
+            border-radius: 10px; font-weight: bold; font-size: 15px; border: 1px solid #ffe0b2;
+            text-align: center;
         }
-        .alert-box {
-            padding: 8px; border-radius: 8px; font-weight: bold; font-size: 14px;
-            background: #f5f5f5; border: 1px solid #ddd; text-align: center;
-        }
-        .alert-success { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
-        .alert-wrong { background: #ffebee; color: #c62828; border-color: #ffcdd2; }
     </style>
 </head>
 <body>
@@ -184,58 +162,35 @@
     </div>
 
     <div class="content-grid">
-        <div class="info-panel">
-            <div class="level-card">
-                <h2 id="current-level">CẤP ĐỘ: 1</h2>
+        <div class="game-panel">
+            <div style="font-weight:bold; color:#1b5e20; font-size:16px;"><i class="fa-solid fa-gamepad"></i> THẾ GIỚI GAME PHÂN LOẠI RÁC ẢO</div>
+            <div class="game-canvas-wrapper">
+                <canvas id="gameCanvas"></canvas>
             </div>
             
-            <div class="mission-card">
-                <h3>🎯 NHIỆM VỤ HIỆN TẠI:</h3>
-                <p id="mission">Bấm Bắt đầu thử thách để khởi chạy hệ thống giả lập game AR!</p>
+            <div class="status-bar-bottom">
+                <div style="color:#2e7d32;" id="current-level">CẤP ĐỘ: 1</div>
+                <div style="color:#1565c0;">ĐIỂM: <span id="score">0</span></div>
+                <div style="color:#c62828;">THỜI GIAN: <span id="timer">45</span>s</div>
             </div>
-
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="stat-label">Điểm số</span>
-                    <span id="score" class="stat-value">0</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-label">Thời gian</span>
-                    <span class="stat-value"><span id="timer">45</span>s</span>
-                </div>
+            <div id="mission" style="background:#fff9c4; padding:8px; border-radius:8px; font-size:13px; text-align:center; font-weight:bold; border-left:5px solid #fbc02d;">
+                Bấm Bắt đầu để trải nghiệm game tương tác AI thực tế!
             </div>
-
-            <div id="game-alert" class="alert-box">Hệ thống đang sẵn sàng...</div>
         </div>
 
         <div class="camera-panel">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold; color:#2e7d32; font-size:15px;">📷 CAMERA NHẬN DIỆN AR TỐI ƯU</span>
+                <span style="font-weight:bold; color:#2e7d32; font-size:15px;"><i class="fa-solid fa-camera"></i> CAMERA TRÍ TUỆ NHÂN TẠO (AI)</span>
                 <button id="btn-toggle-cam" onclick="batTatCamera()">📷 Tắt Camera</button>
             </div>
             
-            <div class="video-container" id="video-zone">
+            <div class="video-container">
                 <video id="webcam" autoplay playsinline muted></video>
-                
                 <div class="scan-overlay-large"></div>
                 <div class="scan-line"></div>
-                
-                <div class="game-overlay-zone" id="game-zone"></div>
-                
-                <div class="virtual-bins-container">
-                    <div class="v-bin bin-organic" id="v-bin-1">
-                        <i class="fa-solid fa-apple-whole"></i> HỮU CƠ (1)
-                    </div>
-                    <div class="v-bin bin-recycle" id="v-bin-2">
-                        <i class="fa-solid fa-bottle-water"></i> TÁI CHẾ (2)
-                    </div>
-                    <div class="v-bin bin-inorganic" id="v-bin-3">
-                        <i class="fa-solid fa-dumpster"></i> VÔ CƠ (3)
-                    </div>
-                </div>
             </div>
 
-            <div id="ai-result">Đang khởi động AI...</div>
+            <div id="ai-result">Đang đợi kết quả quét ảnh từ camera...</div>
         </div>
     </div>
 
