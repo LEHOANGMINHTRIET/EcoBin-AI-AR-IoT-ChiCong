@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hành Trình Xanh Lâm Đồng - Phiên Bản Thực Tế Ảo (AR)</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1 class="game-title">🌿 HÀNH TRÌNH XANH LÂM ĐỒNG (AR) 🌿</h1>
+        <p class="subtitle">Sản phẩm phân loại rác thông minh tích hợp Trí tuệ nhân tạo</p>
+        
+        <div class="control-panel">
+            <button id="btn-connect" onclick="ketNoiArduino()">🔌 Kết nối Thùng Rác Thông Minh</button>
+            <span id="status">Trạng thái: Chưa kết nối phần cứng ❌</span>
+        </div>
+
+        <div class="play-area">
+            <div class="game-info">
+                <div class="level-badge" id="current-level">CẤP ĐỘ: 1</div>
+                <div class="mission-box">
+                    <h3>🎯 Nhiệm vụ hiện tại:</h3>
+                    <p id="mission">Hãy kết nối phần cứng và bấm Bắt đầu thử thách!</p>
+                </div>
+                <div class="stats-container">
+                    <div class="stat-box">♻️ Vật phẩm thu thập: <span id="score" class="highlight">0</span></div>
+                    <div class="stat-box">⏱️ Thời gian còn lại: <span id="timer" class="highlight">45</span>s</div>
+                </div>
+                <div id="game-alert" class="alert-hidden"></div>
+            </div>
+
+            <div class="camera-area">
+                <div class="camera-title">📸 KHU VỰC QUÉT RÁC AI</div>
+                <div class="video-wrapper">
+                    <video id="webcam" autoplay playsinline muted></video>
+                    <div class="scan-overlay"></div>
+                </div>
+                <div id="ai-result">Hệ thống AI đang sẵn sàng...</div>
+            </div>
+        </div>
+
+        <div class="action-panel">
+            <button id="btn-start" onclick="batDauGame()" disabled>🎮 Bắt đầu thử thách</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
