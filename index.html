@@ -9,39 +9,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Lato:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+
     <style>
         * { box-sizing: border-box; }
         body {
             background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
-            font-family: 'Lato', sans-serif;
-            margin: 0;
-            padding: 15px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            font-family: 'Lato', sans-serif; margin: 0; padding: 15px;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
         }
         .main-card {
-            background: white;
-            width: 1280px;
-            height: 760px;
-            border-radius: 25px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.1);
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            border: 4px solid #a5d6a7;
+            background: white; width: 1280px; height: 760px; border-radius: 25px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.1); padding: 25px;
+            display: flex; flex-direction: column; border: 4px solid #a5d6a7;
         }
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .header-title h1 {
-            font-family: 'Poppins', sans-serif;
-            color: #2e7d32; font-size: 28px; margin: 0;
-        }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .header-title h1 { font-family: 'Poppins', sans-serif; color: #2e7d32; font-size: 28px; margin: 0; }
         .header-title p { color: #66bb6a; margin: 3px 0 0 0; font-weight: bold; font-size: 13px;}
         
         .arduino-status {
@@ -50,158 +34,60 @@
         }
         
         .content-grid {
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 25px;
-            flex-grow: 1;
+            display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 25px; flex-grow: 1;
             height: calc(100% - 120px);
         }
         
-        /* 🎮 KHU VỰC THIẾT KẾ PHONG CÁCH GAME GỐC CỦA BẠN */
-        .game-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            background: #ffffff;
-            border: 3px solid #4caf50;
-            border-radius: 20px;
-            padding: 15px;
-        }
+        .game-panel { display: flex; flex-direction: column; gap: 12px; background: #ffffff; border: 3px solid #4caf50; border-radius: 20px; padding: 15px; }
         .game-display-wrapper {
-            width: 100%;
-            flex-grow: 1;
-            background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 70%, #add8e6 100%); /* Nền bầu trời xanh */
-            border-radius: 15px;
-            border: 3px solid #004d40;
-            position: relative;
-            overflow: hidden;
+            width: 100%; flex-grow: 1;
+            background: linear-gradient(to bottom, #87ceeb 0%, #e0f6ff 70%, #add8e6 100%);
+            border-radius: 15px; border: 3px solid #004d40; position: relative; overflow: hidden;
         }
+        .game-cloud { position: absolute; background: white; border-radius: 50%; pointer-events: none; opacity: 0.9; }
+        .cloud-1 { width: 90px; height: 30px; top: 25px; left: 10%; }
+        .cloud-2 { width: 120px; height: 40px; top: 45px; right: 15%; }
 
-        /* Thêm các đám mây trang trí phía sau nền game */
-        .game-cloud {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.8.5);
-            border-radius: 50px;
-            pointer-events: none;
-        }
-        .cloud-1 { width: 100px; height: 35px; top: 20px; left: 15%; }
-        .cloud-2 { width: 140px; height: 45px; top: 50px; right: 20%; }
-
-        /* B bãi cỏ đáy mượt mà sát nhau giống game của bạn */
         .game-bins-footer {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 150px;
-            background: linear-gradient(to bottom, #7cd175 0%, #4caf50 100%); /* Thảm cỏ xanh đậm */
-            display: flex;
-            justify-content: space-around;
-            align-items: flex-end;
-            padding: 0 5px 15px 5px;
-            border-top: 4px solid #2e7d32;
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 150px;
+            background: linear-gradient(to bottom, #7cd175 0%, #4caf50 100%);
+            display: flex; justify-content: space-around; align-items: flex-end; padding: 0 5px 15px 5px; border-top: 4px solid #2e7d32;
         }
-        
-        /* Thiết kế lại dáng thùng rác lớn, bo tròn bo góc cực đẹp */
         .g-bin {
-            width: 110px;
-            height: 125px;
-            border-radius: 15px 15px 8px 8px;
-            color: white;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            font-weight: bold;
-            font-size: 13px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.25);
-            position: relative;
-            transition: transform 0.15s ease-out;
-            border-bottom: 8px solid rgba(0,0,0,0.2); /* Tạo khối đế dày */
+            width: 110px; height: 125px; border-radius: 15px 15px 8px 8px; color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 13px; box-shadow: 0 8px 16px rgba(0,0,0,0.25);
+            position: relative; transition: transform 0.15s ease-out; border-bottom: 8px solid rgba(0,0,0,0.2);
         }
-        .g-bin i { font-size: 38px; margin-bottom: 8px; }
+        .g-bin i { font-size: 36px; margin-bottom: 8px; }
+        .g-bin-organic { background: #388e3c; border: 3px solid #81c784; }
+        .g-bin-recycle { background: #1976d2; border: 3px solid #64b5f6; }
+        .g-bin-inorganic { background: #455a64; border: 3px solid #90a4ae; }
         
-        .g-bin-organic { background: #388e3c; border: 3px solid #81c784; }   /* Xanh lá - Hữu cơ */
-        .g-bin-recycle { background: #1976d2; border: 3px solid #64b5f6; }   /* Xanh dương - Tái chế */
-        .g-bin-inorganic { background: #455a64; border: 3px solid #90a4ae; } /* Xám đen - Vô cơ */
-        
-        /* Hiệu ứng nhún nhảy đàn hồi khi đón rác rơi xuống */
-        .bin-bounce {
-            transform: scale(1.18) translateY(-5px);
-            box-shadow: 0 0 25px #ffffff;
-        }
+        .bin-bounce { transform: scale(1.18) translateY(-5px); box-shadow: 0 0 25px #ffffff; }
 
-        /* Vật phẩm rác rơi tự do phóng to hơn dễ nhìn */
         .falling-trash {
-            position: absolute;
-            font-size: 50px;
-            z-index: 10;
-            top: -70px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: absolute; font-size: 50px; z-index: 10; top: -70px; left: 50%; transform: translateX(-50%);
             filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.15));
             transition: top 1.1s cubic-bezier(0.25, 0.46, 0.45, 0.94), left 1.1s ease-in-out, transform 1.1s;
         }
         
-        /* 📸 KHU VỰC CAMERA AI */
-        .camera-panel {
-            background: #ffffff; border: 3px solid #81c784;
-            border-radius: 20px; padding: 15px;
-            display: flex; flex-direction: column; gap: 12px;
-        }
-        .video-container {
-            width: 100%;
-            flex-grow: 1;
-            background: #263238;
-            border-radius: 15px;
-            position: relative;
-            overflow: hidden;
-            border: 4px solid #37474f;
-        }
+        .camera-panel { background: #ffffff; border: 3px solid #81c784; border-radius: 20px; padding: 15px; display: flex; flex-direction: column; gap: 12px; }
+        .video-container { width: 100%; flex-grow: 1; background: #263238; border-radius: 15px; position: relative; overflow: hidden; border: 4px solid #37474f; }
         #webcam { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         
-        .scan-overlay-large {
-            position: absolute;
-            top: 8%; left: 8%; width: 84%; height: 84%;
-            border: 4px dashed #00e676; border-radius: 15px;
-            pointer-events: none; z-index: 5;
-        }
-        .scan-line {
-            position: absolute; top: 8%; left: 8%; width: 84%; height: 4px;
-            background: #00e676; box-shadow: 0 0 15px #00e676;
-            animation: moveScanLarge 3s infinite linear; z-index: 6;
-        }
-        @keyframes moveScanLarge {
-            0%, 100% { top: 9%; }
-            50% { top: 91%; }
-        }
+        .scan-overlay-large { position: absolute; top: 8%; left: 8%; width: 84%; height: 84%; border: 4px dashed #00e676; border-radius: 15px; pointer-events: none; z-index: 5; }
+        .scan-line { position: absolute; top: 8%; left: 8%; width: 84%; height: 4px; background: #00e676; box-shadow: 0 0 15px #00e676; animation: moveScanLarge 3s infinite linear; z-index: 6; }
+        @keyframes moveScanLarge { 0%, 100% { top: 9%; } 50% { top: 91%; } }
 
-        .status-bar-bottom {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr 1fr;
-            gap: 15px;
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 12px;
-            font-weight: bold;
-        }
-        
+        .status-bar-bottom { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 15px; background: #f5f5f5; padding: 10px; border-radius: 12px; font-weight: bold; }
         .btn-main {
-            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
-            color: white; border: none; padding: 12px 35px; border-radius: 50px;
-            font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s;
-            box-shadow: 0 6px 15px rgba(46,125,50,0.2); width: 250px;
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%); color: white; border: none; padding: 12px 35px; border-radius: 50px;
+            font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; box-shadow: 0 6px 15px rgba(46,125,50,0.2); width: 250px;
         }
         .btn-main:hover { transform: translateY(-2px); }
-        #btn-toggle-cam {
-            background: #616161; color: white; border: none; padding: 6px 12px;
-            border-radius: 20px; cursor: pointer; font-size: 12px;
-        }
-        #ai-result {
-            background: #fff3e0; color: #e65100; padding: 10px;
-            border-radius: 10px; font-weight: bold; font-size: 15px; border: 1px solid #ffe0b2;
-            text-align: center;
-        }
+        #btn-toggle-cam { background: #616161; color: white; border: none; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 12px; }
+        #ai-result { background: #fff3e0; color: #e65100; padding: 10px; border-radius: 10px; font-weight: bold; font-size: 15px; border: 1px solid #ffe0b2; text-align: center; }
     </style>
 </head>
 <body>
@@ -209,8 +95,8 @@
 <div class="main-card">
     <div class="header">
         <div class="header-title">
-            <h1>HÀNH TRÌNH XANH LÂM ĐỒNG</h1>
-            <p>MÔ HÌNH THÔNG MINH AI - AR - IOT | TRƯỜNG THCS CHÍ CÔNG</p>
+            <h1>HÀNH TRÌNH XANH LÂM ĐỒNG (AI OBJECT DETECTION)</h1>
+            <p>SỬ DỤNG MÔ HÌNH NHẬN DIỆN THỰC TẾ TRỰC TIẾP | THCS CHÍ CÔNG</p>
         </div>
         <div class="arduino-status">
             <button onclick="ketNoiArduino()" style="background:#4caf50; color:white; border:none; padding:6px 12px; border-radius:20px; cursor:pointer; font-weight:bold; font-size:12px;">
@@ -223,61 +109,46 @@
     <div class="content-grid">
         <div class="game-panel">
             <div style="font-weight:bold; color:#1b5e20; font-size:16px;"><i class="fa-solid fa-gamepad"></i> THẾ GIỚI GAME PHÂN LOẠI RÁC ẢO</div>
-            
             <div class="game-display-wrapper" id="gameDisplay">
-                <div class="game-cloud cloud-1" style="background: white; border-radius: 50% / 50%;"></div>
-                <div class="game-cloud cloud-2" style="background: white; border-radius: 50% / 50%;"></div>
-                
+                <div class="game-cloud cloud-1"></div>
+                <div class="game-cloud cloud-2"></div>
                 <div class="game-bins-footer">
-                    <div class="g-bin g-bin-organic" id="g-bin-1">
-                        <i class="fa-solid fa-apple-whole"></i>
-                        <span>HỮU CƠ</span>
-                    </div>
-                    <div class="g-bin g-bin-recycle" id="g-bin-2">
-                        <i class="fa-solid fa-bottle-water"></i>
-                        <span>TÁI CHẾ</span>
-                    </div>
-                    <div class="g-bin g-bin-inorganic" id="g-bin-3">
-                        <i class="fa-solid fa-dumpster"></i>
-                        <span>VÔ CƠ</span>
-                    </div>
+                    <div class="g-bin g-bin-organic" id="g-bin-1"><i class="fa-solid fa-apple-whole"></i><span>HỮU CƠ</span></div>
+                    <div class="g-bin g-bin-recycle" id="g-bin-2"><i class="fa-solid fa-bottle-water"></i><span>TÁI CHẾ</span></div>
+                    <div class="g-bin g-bin-inorganic" id="g-bin-3"><i class="fa-solid fa-dumpster"></i><span>VÔ CƠ</span></div>
                 </div>
             </div>
-            
             <div class="status-bar-bottom">
                 <div style="color:#2e7d32;" id="current-level">CẤP ĐỘ: 1</div>
                 <div style="color:#1565c0;">ĐIỂM: <span id="score">0</span></div>
                 <div style="color:#c62828;">THỜI GIAN: <span id="timer">45</span>s</div>
             </div>
             <div id="mission" style="background:#fff9c4; padding:8px; border-radius:8px; font-size:13px; text-align:center; font-weight:bold; border-left:5px solid #fbc02d;">
-                Bấm Bắt đầu để trải nghiệm game tương tác AI thực tế!
+                Đang nạp bộ não AI COCO-SSD... Xin chờ 5 giây!
             </div>
         </div>
 
         <div class="camera-panel">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold; color:#2e7d32; font-size:15px;"><i class="fa-solid fa-camera"></i> CAMERA TRÍ TUỆ NHÂN TẠO (AI)</span>
+                <span style="font-weight:bold; color:#2e7d32; font-size:15px;"><i class="fa-solid fa-camera"></i> MẮT THẦN CAMERA QUÉT VẬT THỂ</span>
                 <button id="btn-toggle-cam" onclick="batTatCamera()">📷 Tắt Camera</button>
             </div>
-            
             <div class="video-container">
                 <video id="webcam" autoplay playsinline muted></video>
                 <div class="scan-overlay-large"></div>
                 <div class="scan-line"></div>
             </div>
-
-            <div id="ai-result">Đang đợi kết quả quét ảnh từ camera...</div>
+            <div id="ai-result">Hệ thống AI đang quét thiết bị...</div>
         </div>
     </div>
 
     <div style="margin-top: 15px; text-align: left;">
-        <button id="btn-start" class="btn-main" onclick="batDauGame()">
+        <button id="btn-start" class="btn-main" onclick="batDauGame()" disabled>
             🎮 BẮT ĐẦU THỬ THÁCH
         </button>
     </div>
 </div>
 
 <script src="script.js"></script>
-
 </body>
 </html>
