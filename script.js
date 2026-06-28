@@ -16,7 +16,20 @@ const kịchBản6Level = {
     6: { tenVatPham: ["tui_nilon"], thongBao: "Màn CHUNG KẾT: Dọn sạch túi nilon để giải cứu Lâm Đồng!", thungMo: "3", diemCanQua: 120 }
 };
 
-// 1. KẾT NỐI MẠCH ARDUINO QUA WEB SERIAL API
+// 1. HÀM TỰ ĐỘNG BẬT WEBCAM NGAY KHI MỞ TRANG WEB (Đã tách riêng ra)
+async function moWebcamMoi() {
+    const video = document.getElementById("webcam");
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        document.getElementById("ai-result").innerText = "📸 Camera đã bật! Hãy kết nối Arduino để chơi.";
+    } catch (err) {
+        alert("Không tìm thấy hoặc không thể mở Webcam trên máy tính của bạn!");
+        document.getElementById("ai-result").innerText = "❌ Lỗi: Không mở được Camera.";
+    }
+}
+
+// 2. HÀM KẾT NỐI MẠCH ARDUINO QUA WEB SERIAL API
 async function ketNoiArduino() {
     try {
         port = await navigator.serial.requestPort();
@@ -26,28 +39,15 @@ async function ketNoiArduino() {
         document.getElementById("status").innerText = "Trạng thái: Đã kết nối Thùng Rác thành công! ✔";
         document.getElementById("status").style.color = "#2e7d32";
         document.getElementById("btn-start").disabled = false; // Mở khóa nút chơi game
-        
-        moWebcamMoi();
+        document.getElementById("mission").innerText = "Phần cứng đã sẵn sàng! Bấm Bắt đầu thử thách ngay.";
     } catch (error) {
         alert("Không thể kết nối cổng COM phần cứng. Hãy thử lại!");
         console.error(error);
     }
 }
 
-// 2. KHỞI ĐỘNG WEBCAM TRÊN GIAO DIỆN GAME
-async function moWebcamMoi() {
-    const video = document.getElementById("webcam");
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-    } catch (err) {
-        alert("Không tìm thấy Webcam trên máy tính của bạn!");
-    }
-}
-
 // 3. KHỞI ĐỘNG TRẬN ĐẤU VÀ ĐỒNG HỒ ĐẾM NGƯỢC
 function batDauGame() {
-    // Đặt lại các thông số ban đầu
     score = 0;
     level = 1;
     timeLeft = 45;
@@ -67,48 +67,42 @@ function batDauGame() {
         }
     }, 1000);
 
-    // Bắt đầu vòng quét AI (Trong khi đợi linh kiện, hệ thống sẽ tự động giả lập bốc rác ngẫu nhiên)
+    // Bắt đầu vòng quét AI giả lập
     clearInterval(aiSimulationInterval);
     aiSimulationInterval = setInterval(quetAnhBangAI, 2500);
 }
 
-// 4. HÀM QUÉT AI (Hiện tại giả lập ngẫu nhiên, có thiết bị thật giơ lên sẽ khớp lệnh)
+// 4. VÒNG LẶP QUÉT AI GIẢ LẬP
 function quetAnhBangAI() {
     if (timeLeft <= 0) return;
 
     const danhSachGiaLap = ["chai_nhua", "la_cay", "tui_nilon", "vo_chuoi", "hop_xop", "rac_doc_hai"];
     const ketQuaAI = danhSachGiaLap[Math.floor(Math.random() * danhSachGiaLap.length)];
     
-    // Đổi tên hiển thị tiếng Việt trực quan trên giao diện
     let tenTiengViet = ketQuaAI.replace("_", " ").toUpperCase();
     document.getElementById("ai-result").innerText = `🔍 AI PHÁT HIỆN VẬT PHẨM: ${tenTiengViet}`;
 
-    // Gửi vật phẩm vào bộ xử lý 6 cấp độ
     kiemTraPhanLoaiHợpLe(ketQuaAI);
 }
 
 // 5. BỘ XỬ LÝ LOGIC CHÍNH CHO 6 LEVEL VÀ RA LỆNH ARDUINO
 async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
-    if (!writer) return;
-
     let levelHienTai = kịchBản6Level[level];
     let alertBox = document.getElementById("game-alert");
-    alertBox.className = ""; // Reset class css
+    alertBox.className = ""; 
 
-    // Kiểm tra xem vật phẩm giơ lên có khớp với yêu cầu của Level hiện tại không
     if (levelHienTai.tenVatPham.includes(vatPhamQuetDuoc)) {
-        // TÍNH ĐIỂM CHÍNH XÁC
         score += 10;
         document.getElementById("score").innerText = score;
         
-        // HIỆN HIỆU ỨNG THÔNG BÁO CHÚC MỪNG TRÊN TRÌNH DUYỆT
-        alertBox.innerText = " chính xác! +10 Điểm. Đang mở nắp thùng rác...";
+        alertBox.innerText = "✨ Chính xác! +10 Điểm. Đang mở nắp thùng rác...";
         alertBox.classList.add("alert-success");
 
-        // BẮN TÍN HIỆU XUỐNG ARDUINO QUA USB ĐỂ MỞ THÙNG
-        await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
+        // Gửi tín hiệu xuống Arduino nếu đã có kết nối phần cứng
+        if (writer) {
+            await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
+        }
 
-        // KIỂM TRA ĐIỀU KIỆN LEVEL UP (CHUYỂN CẤP ĐỘ)
         if (score >= levelHienTai.diemCanQua) {
             if (level < 6) {
                 level++;
@@ -116,12 +110,10 @@ async function kiemTraPhanLoaiHợpLe(vatPhamQuetDuoc) {
                 document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
                 alert(`🎉 Xuất sắc! Bạn đã vượt qua cấp độ. Tiến vào CẤP ĐỘ ${level}!`);
             } else {
-                // Nếu vượt qua màn 6 tức là thắng cuộc hoàn toàn
                 ketThucGame(true);
             }
         }
     } else {
-        // NGƯỜI CHƠI ĐƯA SAI LOẠI RÁC YÊU CẦU
         alertBox.innerText = "❌ Sai rồi! Vật phẩm này không thuộc nhóm rác đang yêu cầu.";
         alertBox.classList.add("alert-wrong");
     }
@@ -139,3 +131,8 @@ function ketThucGame(isChienThang) {
         alert("⏰ Hết giờ! Hãy chuẩn bị lại các món rác thật chuẩn xác để thử thách lại nhé.");
     }
 }
+
+// LỆNH ÉP CAMERA CHẠY NGAY KHI VỪA TẢI TRANG WEB XONG
+window.onload = function() {
+    moWebcamMoi();
+};
