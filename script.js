@@ -6,83 +6,87 @@ let localStream = null, isCamOn = true;
 let netModel = null; 
 let thoiGianChoQuet = false;
 let isGameRunning = false;
+let vatPhamMucTieuHienTai = ""; // Lưu trữ từ khóa rác MC đang yêu cầu
 
-// BẢN ĐỒ ÁNH XẠ: Định nghĩa tên hiển thị Tiếng Việt cho rác rơi ảo
 const thongTinRac = {
-    "bottle": { emoji: "🍾", tenVN: "CHAI NHỰA" }, 
-    "cup": { emoji: "🥤", tenVN: "LY NHỰA / CỐC GIẤY" },    
-    "apple": { emoji: "🍎", tenVN: "RÁC TRÁI CÂY" },  
-    "banana": { emoji: "🍌", tenVN: "VỎ CHUỐI HỮU CƠ" }, 
-    "orange": { emoji: "🍊", tenVN: "VỎ CAM / QUÝT" }, 
-    "sandwich": { emoji: "🥪", tenVN: "THỨC ĂN THỪA" },
-    "book": { emoji: "📦", tenVN: "HỘP GIẤY / SÁCH" },   
-    "cell phone": { emoji: "🛍️", tenVN: "TÚI NILON VÔ CƠ" }
+    "bottle": { emoji: "🍾", tenVN: "CHAI NHỰA", thung: "2", đọc: "chai nhựa" }, 
+    "cup": { emoji: "🥤", tenVN: "LY NHỰA / CỐC GIẤY", thung: "2", đọc: "ly nhựa hoặc cốc giấy" },    
+    "apple": { emoji: "🍎", tenVN: "RÁC TRÁI CÂY TÁO", thung: "1", đọc: "quả táo hữu cơ" },  
+    "banana": { emoji: "🍌", tenVN: "VỎ CHUỐI HỮU CƠ", thung: "1", đọc: "vỏ chuối hữu cơ" }, 
+    "orange": { emoji: "🍊", tenVN: "VỎ CAM QUÝT", thung: "1", đọc: "vỏ cam quýt" }, 
+    "sandwich": { emoji: "🥪", tenVN: "THỨC ĂN THỪA", thung: "1", đọc: "thức ăn thừa" },
+    "book": { emoji: "📦", tenVN: "HỘP GIẤY / SÁCH", thung: "3", đọc: "hộp giấy hoặc sách cũ" },   
+    "cell phone": { emoji: "🛍️", tenVN: "TÚI NILON VÔ CƠ", thung: "3", đọc: "túi nilon hoặc rác vô cơ" }
 };
 
 const kịchBản6Level = {
-    1: { tenVatPham: ["bottle", "cup"], thongBao: "Màn 1: Hãy đưa CHAI NHỰA hoặc LY NHỰA trước camera để TÁI CHẾ!", thungMo: "2", diemCanQua: 20 },
-    2: { tenVatPham: ["apple", "banana", "orange", "sandwich"], thongBao: "Màn 2: Hãy đưa TRÁI CÂY hoặc THỨC ĂN THỪA để ủ phân HỮU CƠ!", thungMo: "1", diemCanQua: 40 },
-    3: { tenVatPham: ["book", "cell phone"], thongBao: "Màn 3: Thu gom chất thải rắn còn lại vào Thùng VÔ CƠ!", thungMo: "3", diemCanQua: 60 },
-    4: { tenVatPham: ["bottle"], thongBao: "Màn 4 Tăng tốc: Tìm thật nhanh CHAI NƯỚC NHỰA cứu lấy môi trường!", thungMo: "2", diemCanQua: 80 },
-    5: { tenVatPham: ["banana", "apple"], thongBao: "Màn 5 Thử thách: Gom rác hữu cơ thực tế bón phân cho cây xanh!", thungMo: "1", diemCanQua: 100 },
-    6: { tenVatPham: ["cup", "book"], thongBao: "Màn CHUNG KẾT: Tổng vệ sinh phân loại rác dâng tặng Lâm Đồng!", thungMo: "3", diemCanQua: 120 }
+    1: { tenVatPham: ["bottle", "cup"], loiMởĐầu: "Màn 1, tập sự phân loại. ", diemCanQua: 20 },
+    2: { tenVatPham: ["apple", "banana", "orange", "sandwich"], loiMởĐầu: "Màn 2, nông trại hữu cơ. ", diemCanQua: 40 },
+    3: { tenVatPham: ["book", "cell phone"], loiMởĐầu: "Màn 3, thu gom chất thải rắn. ", diemCanQua: 60 },
+    4: { tenVatPham: ["bottle", "cup", "book"], loiMởĐầu: "Màn 4 tăng tốc, phân loại nhanh cứu lấy môi trường. ", diemCanQua: 80 },
+    5: { tenVatPham: ["banana", "apple", "bottle"], loiMởĐầu: "Màn 5 thử thách đại sứ kiên trì. ", diemCanQua: 100 },
+    6: { tenVatPham: ["bottle", "cup", "apple", "banana", "orange", "sandwich", "book", "cell phone"], loiMởĐầu: "Màn chung kết xanh, tổng vệ sinh dâng tặng Lâm Đồng. ", diemCanQua: 120 }
 };
 
-// 🔊 BỘ PHÁT ÂM THANH ĐIỆN TỬ CHUYÊN NGHIỆP (KHÔNG LO LỖI KHÔNG TẢI ĐƯỢC FILE)
+// 🔊 BỘ TỔNG HỢP ÂM THANH ĐIỆN TỬ
 function phatAmThanh(loai) {
     const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     const oscillator = audioCtx.createOscillator();
     const gainNode = audioCtx.createGain();
-    
     oscillator.connect(gainNode);
     gainNode.connect(audioCtx.destination);
     
     if (loai === "dung") {
-        // Tiếng Ting Ting vui tai
         oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // Nốt D5
-        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime + 0.1); // Nốt A5
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.25);
+        oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+        oscillator.frequency.setValueAtTime(659.25, audioCtx.currentTime + 0.08); // E5
+        oscillator.frequency.setValueAtTime(783.99, audioCtx.currentTime + 0.16); // G5
+        gainNode.gain.setValueAtTime(0.12, audioCtx.currentTime);
+        oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.3);
     } else if (loai === "sai") {
-        // Tiếng Buzzer trầm cảnh báo
         oscillator.type = "sawtooth";
-        oscillator.frequency.setValueAtTime(120, audioCtx.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
-        oscillator.start();
-        oscillator.stop(audioCtx.currentTime + 0.3);
+        oscillator.frequency.setValueAtTime(140, audioCtx.currentTime);
+        gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        oscillator.start(); oscillator.stop(audioCtx.currentTime + 0.35);
     }
 }
 
-// 🗣️ TRỢ LÝ MC ẢO PHÁT GIỌNG NÓI TIẾNG VIỆT HƯỚNG DẪN MAN CHƠI
+// 🗣️ TRỢ LÝ MC ẢO GIỌNG NỮ TIẾNG VIỆT ĐƯỢC ÉP CẤU HÌNH BẮT BUỘC
 function mcDocHuongDan(vanBan) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel(); // Tắt giọng cũ trước khi nói giọng mới
+        window.speechSynthesis.cancel();
         const loiNoi = new SpeechSynthesisUtterance(vanBan);
         loiNoi.lang = 'vi-VN';
-        loiNoi.rate = 0.95; // Tốc độ nói vừa phải, truyền cảm
-        loiNoi.pitch = 1.0; 
+        loiNoi.rate = 0.92; // Tốc độ đọc diễn cảm chuyên nghiệp
+        loiNoi.pitch = 1.1; // Chỉnh giọng cao thanh thoát (chuẩn nữ)
+
+        // Khớp tìm gói giọng nữ Tiếng Việt của hệ điều hành
+        const cacGiongDoc = window.speechSynthesis.getVoices();
+        const giongVietNu = cacGiongDoc.find(v => v.lang.includes('vi-VN') && (v.name.toLowerCase().includes('nu') || v.name.toLowerCase().includes('anhi') || v.name.toLowerCase().includes('zira')));
+        if (giongVietNu) {
+            loiNoi.voice = giongVietNu;
+        }
         window.speechSynthesis.speak(loiNoi);
     }
 }
 
-// 🧠 TẢI MÔ HÌNH AI TỪ GOOGLE
+// Hàm đảm bảo nạp thư viện giọng nói ngay khi mở trình duyệt
+window.speechSynthesis.onvoiceschanged = () => {};
+
+// 🧠 KHỞI ĐỘNG AI LÕI TRANG WEB
 async function taiMoHinhAI() {
     try {
         netModel = await cocoSsd.load(); 
         document.getElementById("mission").style.background = "#e8f5e9";
         document.getElementById("mission").style.borderLeft = "6px solid #4caf50";
         document.getElementById("mission").style.color = "#2e7d32";
-        document.getElementById("mission").innerText = "✅ Hệ thống AI COCO-SSD đã nạp xong bộ não! Hãy bấm Bắt đầu.";
+        document.getElementById("mission").innerText = "✅ Bộ não AI đã nạp xong 100%! Hãy bấm nút Bắt đầu.";
         document.getElementById("btn-start").disabled = false;
-        document.getElementById("ai-result").innerText = "📸 Đã kích hoạt mắt thần AI sẵn sàng phân loại!";
+        document.getElementById("ai-result").innerText = "📸 Đã kích hoạt mắt thần AI sẵn sàng!";
         
-        // MC chào mừng khi mở trang xong
-        mcDocHuongDan("Chào mừng hai bạn đến với mô hình phân loại rác thông minh trường trung học cơ sở Chí Công.");
+        mcDocHuongDan("Hệ thống đã sẵn sàng. Hãy bấm nút bắt đầu thử thách phân loại rác.");
     } catch (e) {
-        document.getElementById("ai-result").innerText = "❌ Lỗi mạng nơ-ron AI.";
-        document.getElementById("mission").innerText = "❌ Lỗi tải AI. Vui lòng kiểm tra kết nối Internet!";
+        document.getElementById("mission").innerText = "❌ Lỗi kết nối máy chủ AI. Vui lòng tải lại trang!";
     }
 }
 
@@ -93,7 +97,7 @@ async function moWebcamMoi() {
         video.srcObject = localStream;
         isCamOn = true;
     } catch (err) {
-        document.getElementById("ai-result").innerText = "❌ Không kết nối được thiết bị video camera.";
+        document.getElementById("ai-result").innerText = "❌ Thiết bị thiếu quyền truy cập Camera.";
     }
 }
 
@@ -106,7 +110,7 @@ function batTatCamera() {
         video.srcObject = null; isCamOn = false;
         btn.innerText = "📷 Bật Camera";
         const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Xóa khung vẽ
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
     } else {
         moWebcamMoi().then(() => { btn.innerText = "📷 Tắt Camera"; });
     }
@@ -120,19 +124,32 @@ async function ketNoiArduino() {
         document.getElementById("status").innerText = "Đã kết nối IoT Arduino ✔";
         document.getElementById("status").style.color = "#2e7d32";
     } catch (error) {
-        alert("Chưa phát hiện thiết bị IoT thực tế. Chạy chế độ mô phỏng AR tương tác!");
+        alert("Chạy chế độ mô phỏng AR tương tác!");
     }
+}
+
+// TẠO LỆNH NGẪU NHIÊN CHO MỖI PHÂN ĐOẠN MÀN CHƠI
+function taoLenhYeuCauNgauNhien() {
+    let mangVatPhamCuaLevel = kịchBản6Level[level].tenVatPham;
+    // Chọn ngẫu nhiên 1 vật phẩm trong danh sách cho phép của màn đó
+    vatPhamMucTieuHienTai = mangVatPhamCuaLevel[Math.floor(Math.random() * mangVatPhamCuaLevel.length)];
+    
+    let thongBaoChu = `YÊU CẦU: Hãy tìm và đưa [${thongTinRac[vatPhamMucTieuHienTai].tenVN}] trước Camera!`;
+    let loiDocMc = `Hãy tìm và đưa ${thongTinRac[vatPhamMucTieuHienTai].đọc} trước camera`;
+
+    document.getElementById("mission").innerText = thongBaoChu;
+    mcDocHuongDan(loiDocMc);
 }
 
 function batDauGame() {
     score = 0; level = 1; timeLeft = 45; thoiGianChoQuet = false; isGameRunning = true;
     document.getElementById("score").innerText = score;
     document.getElementById("current-level").innerText = `MÀN CHƠI: ${level}`;
-    document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
     document.getElementById("btn-start").disabled = true;
 
-    // Phát giọng nói MC màn 1
-    mcDocHuongDan(kịchBản6Level[level].thongBao);
+    // MC đọc mở đầu màn 1 kèm lệnh yêu cầu đầu tiên
+    mcDocHuongDan(kịchBản6Level[level].loiMởĐầu);
+    setTimeout(taoLenhYeuCauNgauNhien, 1500);
 
     clearInterval(gameInterval);
     gameInterval = setInterval(() => {
@@ -144,7 +161,7 @@ function batDauGame() {
     quetVatTheVongLapAnToan(); 
 }
 
-// 👁️ MẮT THẦN AI QUÉT VÀ VẼ KHUNG ĐỐI TƯỢNG ĐỘNG (DYNAMIC BOUNDING BOX)
+// 👁️ MẮT THẦN AI: TĂNG CAO ĐỘ NHẠY (0.45) VÀ ĐỒNG BỘ KHUNG THỰC REAL-TIME
 async function quetVatTheVongLapAnToan() {
     if (timeLeft <= 0 || !isGameRunning || !isCamOn || !netModel) return;
 
@@ -152,77 +169,77 @@ async function quetVatTheVongLapAnToan() {
     const canvas = document.getElementById("ai-canvas");
     
     if (video.readyState === 4) {
-        // Khớp kích thước canvas bằng với khung hình video hiển thị thật
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
         const ctx = canvas.getContext("2d");
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Xóa khung cũ
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         try {
             const predictions = await netModel.detect(video);
             
-            if (predictions.length > 0) {
-                const vatThe = predictions[0];
-                const tenGocVatThe = vatThe.class;
-                const doChinhXac = vatThe.score;
-                const [x, y, w, h] = vatThe.bbox; // Lấy tọa độ thật của vật thể trong khung hình
+            // Tìm vật thể đầu tiên thuộc danh sách định nghĩa rác của chúng ta
+            const vatTheHợpLệ = predictions.find(p => thongTinRac[p.class]);
 
-                // 🟩 VẼ KHUNG CHỮ NHẬT XANH ÔM KHÍT VẬT THỂ REAL-TIME
-                ctx.strokeStyle = "#4caf50";
-                ctx.lineWidth = 4;
+            if (vatTheHợpLệ) {
+                const tenGocVatThe = vatTheHợpLệ.class;
+                const doChinhXac = vatTheHợpLệ.score;
+                const [x, y, w, h] = vatTheHợpLệ.bbox;
+
+                // Vẽ khung Bounding Box sắc nét ôm sát vật phẩm thực tế
+                ctx.strokeStyle = "#00e676";
+                ctx.lineWidth = 5;
                 ctx.strokeRect(x, y, w, h);
 
-                // Vẽ nhãn tên tiếng Anh nhỏ đè lên góc hộp
-                ctx.fillStyle = "#4caf50";
+                ctx.fillStyle = "#00e676";
                 ctx.font = "bold 16px Arial";
-                ctx.fillText(`${tenGocVatThe} (${(doChinhXac*100).toFixed(0)}%)`, x + 5, y + 20);
+                ctx.fillText(`${thongTinRac[tenGocVatThe].tenVN} (${(doChinhXac*100).toFixed(0)}%)`, x + 5, y + 22);
 
-                // Xử lý logic khi đưa rác hợp lệ vào tầm ngắm
-                if (doChinhXac > 0.60 && thongTinRac[tenGocVatThe] && !thoiGianChoQuet) {
-                    thoiGianChoQuet = true; 
-                    document.getElementById("ai-result").innerText = `🔍 AI PHÁT HIỆN: ${thongTinRac[tenGocVatThe].tenVN}`;
+                // Độ nhạy cực cao (giữ ngưỡng 0.45 để giơ lên nhận ngay lập tức)
+                if (doChinhXac > 0.45 && !thoiGianChoQuet) {
+                    thoiGianChoQuet = true;
+                    // MC hướng dẫn thời gian thực khi quét thấy rác
+                    mcDocHuongDan(`Phát hiện thấy ${thongTinRac[tenGocVatThe].đọc}. Đang xử lý phân loại.`);
+                    document.getElementById("ai-result").innerText = `🔍 AI ĐANG QUÉT: ${thongTinRac[tenGocVatThe].tenVN}`;
+                    
                     banRacVaoTrongGame(tenGocVatThe);
                 }
             } else {
-                document.getElementById("ai-result").innerText = "📸 Hãy giơ sản phẩm rác thực tế vào chính giữa Camera...";
+                document.getElementById("ai-result").innerText = "📸 Hãy đưa vật phẩm vào vùng quét trung tâm của Camera...";
             }
         } catch (err) {
-            console.log("Đang tải dữ liệu khung hình...");
+            console.log("Đang tải dữ liệu...");
         }
     }
 
-    // Tốc độ phản hồi cực cao: Quét liên tục sau 60 mili-giây (Instant response!)
-    setTimeout(quetVatTheVongLapAnToan, 60);
+    // Vòng quét siêu tốc 50ms giúp phản hồi tức thì
+    setTimeout(quetVatTheVongLapAnToan, 50);
 }
 
-// 🎮 ĐỒ HỌA GAME: RÁC RƠI TO, CHẬM, CÓ KÈM THEO NHÃN CHỮ TIẾNG VIỆT RÕ RÀNG
+// 🎮 ĐỒ HỌA GAME RƠI MỚI CHUYỂN ĐỘNG THEO QUỸ ĐẠO MƯỢT MÀ VÀO THÙNG
 function banRacVaoTrongGame(loaiRac) {
     const gameDisplay = document.getElementById("gameDisplay");
     const racAo = document.createElement("div");
     racAo.className = "falling-trash";
     
-    // Thêm cả Emoji lẫn chữ nhãn Tiếng Việt vào khối rác rơi
-    racAo.innerHTML = `<span class="emoji">${thongTinRac[loaiRac].emoji}</span> <span>${thongTinRac[loaiRac].tenVN}</span>`;
+    // Đồ họa hiển thị chữ tiếng Việt đi kèm hình rác rơi cực rõ ràng
+    racAo.innerHTML = `<span class="emoji">${thongTinRac[loaiRac].emoji}</span><span>${thongTinRac[loaiRac].tenVN}</span>`;
     
-    const viTriXNgauNhien = Math.floor(Math.random() * 45) + 15; 
+    const viTriXNgauNhien = Math.floor(Math.random() * 40) + 20; 
     racAo.style.left = `${viTriXNgauNhien}%`;
-    racAo.style.top = `-60px`;
+    racAo.style.top = `-70px`;
     gameDisplay.appendChild(racAo);
 
-    let thungMucTieu = "3"; 
-    if (["apple", "banana", "orange", "sandwich"].includes(loaiRac)) thungMucTieu = "1"; 
-    if (["bottle", "cup"].includes(loaiRac)) thungMucTieu = "2"; 
-
+    const thungMucTieu = thongTinRac[loaiRac].thung;
     const thungElement = document.getElementById(`g-bin-${thungMucTieu}`);
 
-    // Cho rác rơi chậm rãi trong 2.2 giây để người xem nhìn rõ tên rác
+    // Hiệu ứng vật lý rơi tịnh tiến mượt mà
     setTimeout(() => {
-        const layToaDoXThung = thungElement.offsetLeft + (thungElement.clientWidth / 2) - 60;
+        const layToaDoXThung = thungElement.offsetLeft + (thungElement.clientWidth / 2) - 65;
         racAo.style.left = `${layToaDoXThung}px`;
         racAo.style.top = `${gameDisplay.clientHeight - 155}px`;
-        racAo.style.transform = "scale(0.4) rotate(180deg)";
+        racAo.style.transform = "scale(0.5) rotate(180deg)";
         racAo.style.opacity = "0.4";
-    }, 150);
+    }, 100);
 
     setTimeout(() => {
         racAo.remove();
@@ -231,26 +248,28 @@ function banRacVaoTrongGame(loaiRac) {
 
         xuLyLogicGame(loaiRac, thungMucTieu);
         
-        setTimeout(() => { thoiGianChoQuet = false; }, 1500); 
-    }, 2200);
+        // Trì hoãn 2 giây khóa quét để người xem thưởng thức trọn vẹn hiệu ứng rác rơi
+        setTimeout(() => { thoiGianChoQuet = false; }, 2000); 
+    }, 2000);
 }
 
 async function xuLyLogicGame(loaiRac, thungMucTieu) {
     let levelHienTai = kịchBản6Level[level];
 
-    if (levelHienTai.tenVatPham.includes(loaiRac)) {
+    // KIỂM TRA ĐỐI CHIẾU: Phải trùng khớp 100% với vật phẩm MC đang ra lệnh ngẫu nhiên
+    if (loaiRac === vatPhamMucTieuHienTai) {
         score += 10;
         document.getElementById("score").innerText = score;
-        document.getElementById("ai-result").innerText = `✨ CHÍNH XÁC! +10 Điểm thành tích xanh.`;
+        document.getElementById("ai-result").innerText = `✨ CHÍNH XÁC XUẤT SẮC! +10 Điểm.`;
         
-        // Cập nhật bảng thống kê phụ cho giao diện sinh động
         document.getElementById("co2-val").innerText = score * 1.5;
-        if(score >= 40) document.getElementById("eco-rank").innerText = "Hiệp sĩ xanh";
+        if(score >= 40) document.getElementById("eco-rank").innerText = "Hiệp sĩ bảo vệ rừng";
 
-        phatAmThanh("dung"); // Phát tiếng Ting Ting!
-        
+        phatAmThanh("dung"); // Kích hoạt âm thanh Ting Ting
+        mcDocHuongDan("Bạn đã làm rất tốt, cộng 10 điểm.");
+
         if (writer) {
-            await writer.write(new TextEncoder().encode(levelHienTai.thungMo));
+            await writer.write(new TextEncoder().encode(thungMucTieu));
         }
 
         if (score >= levelHienTai.diemCanQua) {
@@ -259,18 +278,25 @@ async function xuLyLogicGame(loaiRac, thungMucTieu) {
                 timeLeft = 45; // ⏱️ HỒI LẠI ĐẦY ĐỦ 45 GIÂY CHO CẤP ĐỘ MỚI
                 document.getElementById("timer").innerText = timeLeft;
                 document.getElementById("current-level").innerText = `MÀN CHƠI: ${level}`;
-                document.getElementById("mission").innerText = kịchBản6Level[level].thongBao;
                 
-                // MC ảo phát âm nói thông báo màn chơi mới
-                mcDocHuongDan("Chúc mừng bạn đã vượt qua màn chơi. " + kịchBản6Level[level].thongBao);
-                alert(`🎉 Tuyệt vời! AI xác nhận hoàn thành mục tiêu. Tiến vào CẤP ĐỘ ${level}!`);
+                mcDocHuongDan(`Chúc mừng hai bạn vượt cấp thành công. Tiến vào ${kịchBản6Level[level].loiMởĐầu}`);
+                alert(`🎉 Tuyệt vời! Bạn đã vượt qua màn. Tiến vào CẤP ĐỘ ${level}!`);
+                
+                setTimeout(taoLenhYeuCauNgauNhien, 3500);
             } else {
                 ketThucGame(true);
             }
+        } else {
+            // Nếu chưa đủ điểm qua màn, MC lập tức ra thêm một lệnh ngẫu nhiên mới
+            setTimeout(taoLenhYeuCauNgauNhien, 1500);
         }
     } else {
-        phatAmThanh("sai"); // Phát tiếng Buzzer cảnh báo!
-        document.getElementById("ai-result").innerText = "❌ SAI THÙNG RỒI! Hãy đọc kỹ yêu cầu nhiệm vụ của MC.";
+        phatAmThanh("sai"); // Âm thanh Buzzer báo lỗi
+        mcDocHuongDan("Sai rồi. Vật phẩm này không đúng yêu cầu của màn chơi.");
+        document.getElementById("ai-result").innerText = "❌ KHÔNG KHỚP YÊU CẦU! Hãy kiểm tra kỹ lệnh yêu cầu của MC.";
+        
+        // Cho phép đổi lệnh mới nếu làm sai để người chơi không bị kẹt
+        setTimeout(taoLenhYeuCauNgauNhien, 2000);
     }
 }
 
@@ -279,15 +305,15 @@ function ketThucGame(isChienThang) {
     clearInterval(gameInterval);
     const canvas = document.getElementById("ai-canvas");
     const ctx = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height); // Xóa khung vẽ khi dừng game
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     document.getElementById("btn-start").disabled = false;
     if (isChienThang) {
-        mcDocHuongDan("Chúc mừng hai bạn đã hoàn thành xuất sắc thử thách phân loại rác.");
-        alert("🏆 CHIẾN THẮNG XUẤT SẮC! Hệ thống AI Mắt thần đã hoàn thành xuất sắc nhiệm vụ bảo vệ Lâm Đồng!");
+        mcDocHuongDan("Chúc mừng hai bạn đã hoàn thành xuất sắc tất cả các cấp độ chơi và bảo vệ hành tinh xanh.");
+        alert("🏆 CHIẾN THẮNG TUYỆT ĐỐI! Chúc mừng các nhà khoa học trẻ của trường Chí Công!");
     } else {
-        mcDocHuongDan("Đã hết thời gian quy định, vui lòng thử lại.");
-        alert("⏰ HẾT GIỜ THỬ THÁCH! Hãy bấm Bắt đầu để dọn dẹp lại nhé.");
+        mcDocHuongDan("Rất tiếc, đã hết thời gian thử thách. Hãy thử lại từ đầu.");
+        alert("⏰ HẾT GIỜ! Đừng nản chí, hãy bấm Bắt đầu để thử thách lại nhé.");
     }
 }
 
