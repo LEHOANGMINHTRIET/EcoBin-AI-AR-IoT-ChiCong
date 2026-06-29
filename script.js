@@ -53,49 +53,48 @@ function phatAmThanh(loai) {
     }
 }
 
-// 🗣️ TRỢ LÝ MC ẢO GIỌNG NỮ TIẾNG VIỆT - KHẮC PHỤC TRIỆT ĐỂ LỖI TIẾNG ANH
+// 🗣️ ĐOẠN CODE MC KHÓA CỨNG GIỌNG NỮ TIẾNG VIỆT (CHỐNG BẮN TIẾNG ANH)
 function mcDocHuongDan(vanBan) {
     if (!('speechSynthesis' in window)) return;
 
-    // Hủy ngay lập tức các lệnh đọc cũ đang bị nghẽn hàng đợi
+    // Hủy ngay lập tức các câu nói tiếng Anh đang bị nghẽn trong hàng đợi
     window.speechSynthesis.cancel();
 
-    const khoiChayGiongDoc = () => {
+    const thucHienDoc = () => {
         const loiNoi = new SpeechSynthesisUtterance(vanBan);
-        loiNoi.lang = 'vi-VN';
-        loiNoi.rate = 0.90; // Tốc độ đọc diễn cảm
-        loiNoi.pitch = 1.15; // Tông giọng nữ cao trong trẻo
-
-        const cacGiongDoc = window.speechSynthesis.getVoices();
         
-        // Chiến thuật tìm kiếm và ép trình duyệt nhận diện chính xác bộ Tiếng Việt giọng Nữ
-        const giongTiengViet = cacGiongDoc.find(v => 
+        // Cấu hình chuẩn tiếng Việt diễn cảm
+        loiNoi.lang = 'vi-VN';
+        loiNoi.rate = 0.92; // Tốc độ vừa phải, rõ chữ
+        loiNoi.pitch = 1.15; // Tông giọng nữ cao, trong trẻo
+
+        // Lấy tất cả các giọng nói có trong máy tính của bạn
+        const danhSachGiong = window.speechSynthesis.getVoices();
+        
+        // Thuật toán quét sâu: Tìm bằng được gói tiếng Việt (vi-VN, vi_VN hoặc tên chứa Vietnam)
+        const giongTiengViet = danhSachGiong.find(v => 
             v.lang.toLowerCase().replace('_', '-').includes('vi-vn') || 
             v.name.toLowerCase().includes('vietnam') ||
             v.name.toLowerCase().includes('anhi') ||
             v.name.toLowerCase().includes('google')
         );
 
+        // Nếu tìm thấy giọng Việt, khóa chặt nó lại cho đối tượng đọc
         if (giongTiengViet) {
             loiNoi.voice = giongTiengViet;
-            loiNoi.lang = giongTiengViet.lang;
+            loiNoi.lang = giongTiengViet.lang; // Ép trình duyệt đồng bộ
         }
 
         window.speechSynthesis.speak(loiNoi);
     };
 
-    // Bẫy đợi danh sách giọng của hệ thống tải xong hoàn toàn
+    // Mẹo kích hoạt: Nếu danh sách giọng chưa load kịp, bắt trình duyệt đợi load xong mới đọc
     if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = khoiChayGiongDoc;
+        window.speechSynthesis.onvoiceschanged = thucHienDoc;
     } else {
-        khoiChayGiongDoc();
+        thucHienDoc();
     }
 }
-
-// Ép nạp thư viện âm thanh ẩn ngay từ lúc mở web
-window.addEventListener('DOMContentLoaded', () => {
-    if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
-});
 
 // 🧠 TẢI MÔ HÌNH NÃO BỘ AI COCO-SSD
 async function taiMoHinhAI() {
@@ -334,7 +333,7 @@ function ketThucGame(isChienThang) {
     
     document.getElementById("btn-start").disabled = false;
     if (isChienThang) {
-        mcDocHuongDan("Chúc mừng hai bạn đã hoàn thành xuất sắc tất cả các cấp độ chơi và bảo vệ hành tinh xanh.");
+        mcDocHuongDan("Chúc mừng các bạn đã hoàn thành xuất sắc tất cả các cấp độ chơi và bảo vệ hành tinh xanh.");
         alert("🏆 CHIẾN THẮNG TUYỆT ĐỐI! Hệ thống phân loại AI đã hoàn thành xuất sắc thử thách!");
     } else {
         mcDocHuongDan("Rất tiếc, đã hết thời gian thử thách. Hãy thử lại từ đầu.");
@@ -347,3 +346,11 @@ window.onload = function() {
         taiMoHinhAI();
     });
 };
+
+// Đoạn mã mồi giúp trình duyệt nạp sẵn bộ nhớ đệm Tiếng Việt ngay khi mở trang
+if ('speechSynthesis' in window) {
+    window.speechSynthesis.getVoices();
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+}
