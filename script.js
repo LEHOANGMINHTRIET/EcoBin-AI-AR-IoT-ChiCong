@@ -53,46 +53,53 @@ function phatAmThanh(loai) {
     }
 }
 
-// 🗣️ ĐOẠN CODE MC KHÓA CỨNG GIỌNG NỮ TIẾNG VIỆT (CHỐNG BẮN TIẾNG ANH)
+// 🗣️ TRỢ LÝ MC ẢO GIỌNG NỮ TIẾNG VIỆT - PHIÊN BẢN NÂNG CẤP PHÒNG THU (RÕ CHỮ 100%)
 function mcDocHuongDan(vanBan) {
     if (!('speechSynthesis' in window)) return;
 
-    // Hủy ngay lập tức các câu nói tiếng Anh đang bị nghẽn trong hàng đợi
+    // Xóa sạch các câu lệnh cũ đang xếp hàng để tránh bị vấp chữ
     window.speechSynthesis.cancel();
 
-    const thucHienDoc = () => {
+    const phatGiongChuanCaoCap = () => {
         const loiNoi = new SpeechSynthesisUtterance(vanBan);
         
-        // Cấu hình chuẩn tiếng Việt diễn cảm
         loiNoi.lang = 'vi-VN';
-        loiNoi.rate = 0.92; // Tốc độ vừa phải, rõ chữ
-        loiNoi.pitch = 1.15; // Tông giọng nữ cao, trong trẻo
+        loiNoi.rate = 0.95; // Tốc độ vàng giúp phát âm tiếng Việt tròn vành rõ chữ
+        loiNoi.pitch = 1.0;  // Giữ tông giọng tự nhiên, không bị chói
 
-        // Lấy tất cả các giọng nói có trong máy tính của bạn
         const danhSachGiong = window.speechSynthesis.getVoices();
         
-        // Thuật toán quét sâu: Tìm bằng được gói tiếng Việt (vi-VN, vi_VN hoặc tên chứa Vietnam)
-        const giongTiengViet = danhSachGiong.find(v => 
-            v.lang.toLowerCase().replace('_', '-').includes('vi-vn') || 
-            v.name.toLowerCase().includes('vietnam') ||
-            v.name.toLowerCase().includes('anhi') ||
-            v.name.toLowerCase().includes('google')
+        // 🌟 CHIẾN THUẬT SĂN GIỌNG CAO CẤP: Ưu tiên tìm giọng AI Online/Natural trước
+        let giongDocToiUu = danhSachGiong.find(v => 
+            v.lang.toLowerCase().replace('_', '-').includes('vi-vn') && 
+            (v.name.toLowerCase().includes('online') || 
+             v.name.toLowerCase().includes('natural') || 
+             v.name.toLowerCase().includes('neural') || 
+             v.name.toLowerCase().includes('le'))
         );
 
-        // Nếu tìm thấy giọng Việt, khóa chặt nó lại cho đối tượng đọc
-        if (giongTiengViet) {
-            loiNoi.voice = giongTiengViet;
-            loiNoi.lang = giongTiengViet.lang; // Ép trình duyệt đồng bộ
+        // Nếu máy không có giọng Online, mới dùng giọng Tiếng Việt tiêu chuẩn làm phương án dự phòng
+        if (!giongDocToiUu) {
+            giongDocToiUu = danhSachGiong.find(v => 
+                v.lang.toLowerCase().replace('_', '-').includes('vi-vn') || 
+                v.name.toLowerCase().includes('vietnam')
+            );
+        }
+
+        // Khóa chặt giọng đọc cao cấp vừa tìm được
+        if (giongDocToiUu) {
+            loiNoi.voice = giongDocToiUu;
+            loiNoi.lang = giongDocToiUu.lang;
+            console.log("🎯 AI đã chọn giọng đọc chất lượng cao: " + giongDocToiUu.name);
         }
 
         window.speechSynthesis.speak(loiNoi);
     };
 
-    // Mẹo kích hoạt: Nếu danh sách giọng chưa load kịp, bắt trình duyệt đợi load xong mới đọc
     if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = thucHienDoc;
+        window.speechSynthesis.onvoiceschanged = phatGiongChuanCaoCap;
     } else {
-        thucHienDoc();
+        phatGiongChuanCaoCap();
     }
 }
 
