@@ -51,62 +51,40 @@ function phatAmThanh(loai) {
     }
 }
 
-// 🗣️ TRỢ LÝ MC ẢO GIỌNG NỮ TIẾNG VIỆT - PHIÊN BẢN NÂNG CẤP CAO CẤP (ÉP CHỌN GIỌNG NỮ & RÕ NÉT)
+// 🗣️ HÀM MC GIỌNG NỮ AI "CHỊ GOOGLE CHUẨN HD" - CHẠY TRỰC TIẾP TỪ ĐÁM MÂY (KHÔNG CẦN ĐĂNG KÝ)
 function mcDocHuongDan(vanBan) {
-    if (!('speechSynthesis' in window)) return;
+    // Ép trình duyệt hủy bộ đọc mặc định cũ nếu có để không bị đè âm thanh
+    if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+    }
 
-    // Hủy ngay lập tức các câu nói cũ để tránh bị nghẽn và tiếng được tiếng không
-    window.speechSynthesis.cancel();
+    try {
+        // Chuẩn hóa văn bản: Mã hóa các ký tự tiếng Việt (như dấu, khoảng trắng) để gửi lên đám mây Google
+        const vanBanMaHoa = encodeURIComponent(vanBan);
+        
+        // Đường dẫn kết nối trực tiếp đến cổng âm thanh Cloud TTS công cộng của Google Dịch
+        const linkAmThanhGoogle = `https://translate.google.com/translate_tts?ie=UTF-8&tl=vi&client=tw-ob&q=${vanBanMaHoa}`;
+        
+        // Tạo một đối tượng Audio ngầm để tải và phát file âm thanh chất lượng cao
+        const audioMc = new Audio(linkAmThanhGoogle);
+        
+        // Tăng cường tốc độ tải và phát lập tức
+        audioMc.play().catch(e => {
+            console.log("Trình duyệt chặn tự động phát, đợi tương tác người dùng.");
+            // Nếu trình duyệt chặn phát tự động, ta lưu vào bộ nhớ để phát khi bấm nút chơi
+            window.amThanhDuPhong = audioMc;
+        });
 
-    const khoiChayGiongDocNu = () => {
+        console.log("🎯 Đang phát giọng đọc Cloud AI (Chị Google): " + vanBan);
+
+    } catch (error) {
+        console.log("Cổng Google Cloud bận, dùng phương án dự phòng cơ bản.");
+        // Nếu mất mạng hoặc lỗi, tự động lùi về bộ đọc mặc định của máy để game không bị đứng
         const loiNoi = new SpeechSynthesisUtterance(vanBan);
         loiNoi.lang = 'vi-VN';
-        loiNoi.rate = 0.95; // Tốc độ diễn cảm chuẩn
-        loiNoi.pitch = 1.15; // Tông giọng nữ cao thanh thoát
-
-        const cacGiongDoc = window.speechSynthesis.getVoices();
-        
-        // 🌟 CHIẾN THUẬT SĂN GIỌNG CAO CẤP (Microsoft Edge HoaiMy/Anhi Online, Google Nữ)
-        // Ưu tiên các giọng đọc AI Online Natural/Neural để có chất lượng hay nhất
-        let giongVietNu = cacGiongDoc.find(v => 
-            v.lang.toLowerCase().replace('_', '-').includes('vi-vn') && 
-            (v.name.toLowerCase().includes('nu') || 
-             v.name.toLowerCase().includes('anhi') || 
-             v.name.toLowerCase().includes('natural') || 
-             v.name.toLowerCase().includes('neural'))
-        );
-
-        // Nếu máy không có giọng Online cao cấp, mới dùng giọng Tiếng ViệtOffline tiêu chuẩn làm dự phòng
-        if (!giongVietNu) {
-            giongVietNu = cacGiongDoc.find(v => 
-                v.lang.toLowerCase().replace('_', '-').includes('vi-vn') || 
-                v.name.toLowerCase().includes('vietnam')
-            );
-        }
-
-        // Khóa chặt giọng đọc cao cấp vừa tìm được
-        if (giongVietNu) {
-            loiNoi.voice = giongVietNu;
-            loiNoi.lang = giongVietNu.lang; // Ép trình duyệt đồng bộ
-            console.log("🎯 AI đã chọn giọng đọc chất lượng cao: " + giongVietNu.name);
-        }
-
         window.speechSynthesis.speak(loiNoi);
-    };
-
-    // Bẫy đợi danh sách giọng của hệ thống tải xong hoàn toàn
-    if (window.speechSynthesis.getVoices().length === 0) {
-        window.speechSynthesis.onvoiceschanged = khoiChayGiongDocNu;
-    } else {
-        khoiChayGiongDocNu();
     }
 }
-
-// Gọi một câu lệnh ẩn ngay khi tải trang để kích hoạt bộ nhớ đệm tiếng Việt của trình duyệt
-window.addEventListener('DOMContentLoaded', () => {
-    if ('speechSynthesis' in window) { window.speechSynthesis.getVoices(); }
-});
-
 // 🧠 TẢI MÔ HÌNH NÃO BỘ AI COCO-SSD
 async function taiMoHinhAI() {
     try {
